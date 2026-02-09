@@ -158,6 +158,7 @@ export interface UserSummary {
   email: string;
   name?: string;
   role?: string;
+  phone_number?: string | null;
 }
 
 export interface VehicleSummary {
