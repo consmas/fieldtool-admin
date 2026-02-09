@@ -26,7 +26,12 @@ export default function LoginPage() {
         throw new Error("No token returned. Confirm the API response shape.");
       }
 
-      const user = "data" in response ? response.data.user : response.user;
+      const user =
+        "data" in response && response.data
+          ? response.data.user
+          : "user" in response
+          ? response.user
+          : null;
       setSession(token, user ?? null);
       router.replace("/dashboard");
     } catch (err) {
