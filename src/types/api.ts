@@ -166,6 +166,7 @@ export interface VehicleSummary {
   name: string;
   kind?: string;
   license_plate?: string | null;
+  truck_type_capacity?: string | null;
 }
 
 export interface User {
