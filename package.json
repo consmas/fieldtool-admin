@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev -p 6001",
     "build": "next build",
-    "start": "next start -p 6001",
+    "start": "next start -p $PORT",
     "lint": "eslint"
   },
   "dependencies": {
