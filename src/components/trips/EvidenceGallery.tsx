@@ -1,10 +1,10 @@
-import type { Trip } from "@/types/api";
+import type { EvidenceItem } from "@/types/api";
 
 export default function EvidenceGallery({
   evidence,
   title = "Evidence Gallery",
 }: {
-  evidence?: Trip["evidence_photos"];
+  evidence?: EvidenceItem[];
   title?: string;
 }) {
   const items = evidence ?? [];
@@ -23,16 +23,22 @@ export default function EvidenceGallery({
             No evidence uploaded yet.
           </div>
         ) : (
-          items.map((url, index) => (
+          items.map((item, index) => (
             <div
-              key={index}
+              key={item.id ?? index}
               className="aspect-video overflow-hidden rounded-xl border border-border bg-muted"
             >
-              <img
-                src={url}
-                alt={`Evidence ${index + 1}`}
-                className="h-full w-full object-cover"
-              />
+              {item.photo_url ? (
+                <img
+                  src={item.photo_url}
+                  alt={`Evidence ${index + 1}`}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+                  No image
+                </div>
+              )}
             </div>
           ))
         )}
