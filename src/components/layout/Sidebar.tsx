@@ -31,6 +31,7 @@ const tripItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const clearSession = useAuthStore((state) => state.clearSession);
+  const role = useAuthStore((state) => state.user?.role ?? "admin");
   const isTripsActive =
     pathname === "/trips" ||
     pathname.startsWith("/trips/") ||
@@ -50,18 +51,20 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-4">
-        <Link
-          href="/dashboard"
-          className={cn(
-            "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition",
-            pathname === "/dashboard"
-              ? "bg-sidebar-accent text-sidebar-accent-foreground"
-              : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
-          )}
-        >
-          <LayoutGrid className="h-4 w-4" />
-          Dashboard
-        </Link>
+        {role !== "dispatcher" ? (
+          <Link
+            href="/dashboard"
+            className={cn(
+              "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition",
+              pathname === "/dashboard"
+                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
+            )}
+          >
+            <LayoutGrid className="h-4 w-4" />
+            Dashboard
+          </Link>
+        ) : null}
 
         <div className="space-y-1">
           <div
@@ -119,26 +122,33 @@ export default function Sidebar() {
           ) : null}
         </div>
 
-        {navItems.map((item) => {
-          const active =
-            pathname === item.href || pathname.startsWith(`${item.href}/`);
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition",
-                active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          );
-        })}
+        {navItems
+          .filter((item) => {
+            if (role === "dispatcher") {
+              return item.href === "/reports";
+            }
+            return true;
+          })
+          .map((item) => {
+            const active =
+              pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition",
+                  active
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                    : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground"
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            );
+          })}
       </nav>
 
       <div className="border-t border-sidebar-border p-4">
