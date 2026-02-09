@@ -76,6 +76,8 @@ export interface Trip {
   end_odometer_photo_url?: string | null;
   client_rep_signature_url?: string | null;
   proof_of_fuelling_url?: string | null;
+  proof_of_fueling_url?: string | null;
+  proofOfFuellingUrl?: string | null;
   inspector_signature_url?: string | null;
   security_signature_url?: string | null;
   driver_signature_url?: string | null;
@@ -214,6 +216,7 @@ export interface PreTripInspection {
   odometer_photo_url?: string | null;
   load_photo_url?: string | null;
   waybill_photo_url?: string | null;
+  inspector_signature_url?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 }

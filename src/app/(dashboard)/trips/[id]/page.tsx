@@ -435,8 +435,15 @@ export default function TripDetailPage() {
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {[
               { label: "Client Rep Signature", url: trip.client_rep_signature_url },
-              { label: "Proof of Fuelling", url: trip.proof_of_fuelling_url },
-              { label: "Inspector Signature", url: trip.inspector_signature_url },
+              {
+                label: "Proof of Fuelling",
+                url:
+                  trip.proof_of_fuelling_url ??
+                  trip.proof_of_fueling_url ??
+                  trip.proofOfFuellingUrl ??
+                  null,
+              },
+              { label: "Inspector Signature", url: preTrip?.inspector_signature_url ?? trip.inspector_signature_url },
               { label: "Security Signature", url: trip.security_signature_url },
               { label: "Driver Signature", url: trip.driver_signature_url },
             ].map((item) => (
