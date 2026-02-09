@@ -20,12 +20,7 @@ export default function GoogleMap({ lat, lng }: GoogleMapProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID;
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      // eslint-disable-next-line no-console
-      console.log("[Maps] API key present:", Boolean(apiKey));
-    }
-  }, [apiKey]);
+  // Debug log removed for production builds.
 
   const coords = useMemo(() => {
     const latNum = toNumber(lat);
@@ -40,7 +35,7 @@ export default function GoogleMap({ lat, lng }: GoogleMapProps) {
     }
 
     if (!optionsInitialized) {
-      setOptions({ apiKey, version: "weekly" });
+      setOptions({ apiKey, version: "weekly" } as unknown as object);
       optionsInitialized = true;
     }
 
