@@ -69,9 +69,20 @@ export interface Trip {
   fuel_payment_mode?: string | null;
   fuel_litres_filled?: string | null;
   fuel_receipt_no?: string | null;
+  fuel_allocated_litres?: string | null;
+  fuel_allocation_station?: string | null;
+  fuel_allocation_payment_mode?: "cash" | "card" | "credit" | string | null;
+  fuel_allocation_reference?: string | null;
+  fuel_allocation_note?: string | null;
   return_time?: string | null;
   vehicle_condition_post_trip?: string | null;
   post_trip_inspector_name?: string | null;
+  road_expense_disbursed?: boolean | null;
+  road_expense_reference?: string | null;
+  road_expense_payment_status?: "pending" | "paid" | "rejected" | string | null;
+  road_expense_payment_method?: "cash" | "momo" | "bank" | string | null;
+  road_expense_payment_reference?: string | null;
+  road_expense_note?: string | null;
   start_odometer_photo_url?: string | null;
   end_odometer_photo_url?: string | null;
   client_rep_signature_url?: string | null;
@@ -144,6 +155,18 @@ export interface EvidenceItem {
   photo_url?: string | null;
 }
 
+export interface TripStop {
+  id?: number;
+  sequence?: number;
+  destination?: string | null;
+  delivery_address?: string | null;
+  tonnage_load?: string | null;
+  waybill_number?: string | null;
+  customer_contact_name?: string | null;
+  customer_contact_phone?: string | null;
+  special_instructions?: string | null;
+}
+
 export interface LatestLocation {
   id: number;
   lat: number;
@@ -188,6 +211,33 @@ export interface Vehicle {
   truck_type_capacity?: string | null;
 }
 
+export interface Destination {
+  id: number;
+  name: string;
+  average_distance_km: number;
+  base_km: number;
+  base_trip_cost: number;
+  liters_per_km: number;
+  active: boolean;
+}
+
+export interface FuelPrice {
+  id: number;
+  price_per_liter: number;
+  effective_at: string;
+}
+
+export interface RateCalculationResponse {
+  base_trip_cost: number;
+  base_km: number;
+  total_km: number;
+  liters_per_km: number;
+  fuel_cost_per_km: number;
+  extra_distance_charge: number;
+  extra_stop_charge: number;
+  final_trip_cost: number;
+}
+
 export interface PreTripInspection {
   id: number;
   trip_id: number;
@@ -219,6 +269,13 @@ export interface PreTripInspection {
   load_photo_url?: string | null;
   waybill_photo_url?: string | null;
   inspector_signature_url?: string | null;
+  inspection_verification_status?: "approved" | "rejected" | string | null;
+  inspection_verified_by_id?: number | null;
+  inspection_verified_at?: string | null;
+  inspection_verification_note?: string | null;
+  inspection_confirmed?: boolean | null;
+  inspection_confirmed_by_id?: number | null;
+  inspection_confirmed_at?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 }

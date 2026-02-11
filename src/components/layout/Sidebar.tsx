@@ -11,12 +11,18 @@ import {
   ChevronDown,
   Map,
   FileText,
+  ClipboardCheck,
+  MapPin,
+  Fuel,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useState } from "react";
 import { useAuthStore } from "@/stores/auth.store";
 
 const navItems = [
+  { href: "/logistics", label: "Logistics Manager", icon: ClipboardCheck },
+  { href: "/destinations", label: "Destinations", icon: MapPin },
+  { href: "/fuel-prices", label: "Fuel Prices", icon: Fuel },
   { href: "/tracking", label: "Tracking", icon: Map },
   { href: "/users", label: "Users", icon: Users },
   { href: "/vehicles", label: "Vehicles", icon: MapPinned },
@@ -125,7 +131,7 @@ export default function Sidebar() {
         {navItems
           .filter((item) => {
             if (role === "dispatcher") {
-              return item.href === "/reports";
+              return ["/reports", "/logistics", "/destinations", "/fuel-prices"].includes(item.href);
             }
             return true;
           })

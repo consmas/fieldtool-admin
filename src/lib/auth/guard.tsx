@@ -10,6 +10,10 @@ const dispatcherAllowed = [
   /^\/trips\/\d+$/,
   /^\/trips\/\d+\/edit$/,
   /^\/reports$/,
+  /^\/destinations$/,
+  /^\/destinations\/\d+$/,
+  /^\/fuel-prices$/,
+  /^\/logistics$/,
 ];
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {

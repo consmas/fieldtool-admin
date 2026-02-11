@@ -4,9 +4,10 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import TripForm from "@/components/trips/TripForm";
 import { createTrip } from "@/lib/api/trips";
+import { createTripStop } from "@/lib/api/stops";
 import { fetchUsers } from "@/lib/api/users";
 import { fetchVehicles } from "@/lib/api/vehicles";
-import type { Trip } from "@/types/api";
+import type { Trip, TripStop } from "@/types/api";
 
 export default function NewTripPage() {
   const queryClient = useQueryClient();
@@ -23,9 +24,10 @@ export default function NewTripPage() {
 
   const createMutation = useMutation({
     mutationFn: createTrip,
-    onSuccess: async () => {
+    onSuccess: async (trip) => {
       await queryClient.invalidateQueries({ queryKey: ["trips"] });
       setMessage("Trip created.");
+      return trip;
     },
     onError: () => setMessage("Unable to create trip."),
   });
@@ -48,9 +50,17 @@ export default function NewTripPage() {
         submitLabel={
           createMutation.isPending ? "Creating..." : "Create Trip"
         }
-        onSubmit={(payload: Partial<Trip>) => {
+        onSubmit={async (payload: Partial<Trip> & { stops?: TripStop[] }) => {
           setMessage(null);
-          createMutation.mutate(payload);
+          const { stops, ...tripPayload } = payload;
+          const created = await createMutation.mutateAsync(tripPayload);
+          if (stops && stops.length > 0 && created?.id) {
+            await Promise.all(
+              stops.map((stop, index) =>
+                createTripStop(created.id, { ...stop, sequence: index + 1 })
+              )
+            );
+          }
         }}
         message={message}
       />

@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Trip, User, Vehicle } from "@/types/api";
+import type { Trip, TripStop, User, Vehicle } from "@/types/api";
 
 const emptyForm: Partial<Trip> & {
   driver_id?: number | null;
   vehicle_id?: number | null;
+  stops?: TripStop[];
 } = {
   status: "assigned",
   trip_date: "",
@@ -14,8 +15,6 @@ const emptyForm: Partial<Trip> & {
   vehicle_id: null,
   truck_reg_no: "",
   truck_type_capacity: "",
-  road_expense_disbursed: false,
-  road_expense_reference: "",
   client_name: "",
   waybill_number: "",
   destination: "",
@@ -24,6 +23,7 @@ const emptyForm: Partial<Trip> & {
   customer_contact_name: "",
   customer_contact_phone: "",
   special_instructions: "",
+  stops: [],
 };
 
 function toInputDate(value?: string | null) {
@@ -33,12 +33,16 @@ function toInputDate(value?: string | null) {
   return date.toISOString().slice(0, 10);
 }
 
+function todayInputDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export interface TripFormProps {
   users: User[];
   vehicles: Vehicle[];
   initialTrip?: Trip | null;
   submitLabel: string;
-  onSubmit: (payload: Partial<Trip>) => void;
+  onSubmit: (payload: Partial<Trip> & { stops?: TripStop[] }) => void;
   message?: string | null;
   onCancel?: () => void;
 }
@@ -53,10 +57,10 @@ export default function TripForm({
   onCancel,
 }: TripFormProps) {
   const [form, setForm] = useState(() => {
-    if (!initialTrip) return emptyForm;
+    if (!initialTrip) return { ...emptyForm, trip_date: todayInputDate() };
     return {
       status: initialTrip.status ?? "assigned",
-      trip_date: toInputDate(initialTrip.trip_date),
+      trip_date: toInputDate(initialTrip.trip_date) || todayInputDate(),
       driver_id: initialTrip.driver?.id ?? initialTrip.driver_id ?? null,
       driver_contact:
         initialTrip.driver_contact ??
@@ -69,8 +73,6 @@ export default function TripForm({
         initialTrip.truck_type_capacity ??
         initialTrip.vehicle?.truck_type_capacity ??
         "",
-      road_expense_disbursed: Boolean(initialTrip.road_expense_disbursed),
-      road_expense_reference: initialTrip.road_expense_reference ?? "",
       client_name: initialTrip.client_name ?? "",
       waybill_number:
         initialTrip.waybill_number ?? initialTrip.reference_code ?? "",
@@ -80,6 +82,7 @@ export default function TripForm({
       customer_contact_name: initialTrip.customer_contact_name ?? "",
       customer_contact_phone: initialTrip.customer_contact_phone ?? "",
       special_instructions: initialTrip.special_instructions ?? "",
+      stops: [],
     };
   });
 
@@ -101,7 +104,7 @@ export default function TripForm({
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
 
-    const payload: Partial<Trip> = {
+    const payload: Partial<Trip> & { stops?: TripStop[] } = {
       status: form.status || undefined,
       trip_date: form.trip_date
         ? new Date(form.trip_date).toISOString()
@@ -114,8 +117,6 @@ export default function TripForm({
       truck_type_capacity:
         (selectedVehicle?.truck_type_capacity ?? form.truck_type_capacity) ||
         undefined,
-      road_expense_disbursed: Boolean(form.road_expense_disbursed),
-      road_expense_reference: form.road_expense_reference || undefined,
       client_name: form.client_name || undefined,
       waybill_number: form.waybill_number || undefined,
       reference_code: form.waybill_number || undefined,
@@ -125,9 +126,18 @@ export default function TripForm({
       customer_contact_name: form.customer_contact_name || undefined,
       customer_contact_phone: form.customer_contact_phone || undefined,
       special_instructions: form.special_instructions || undefined,
+      stops: form.stops?.filter((stop) => stop.destination || stop.waybill_number),
     };
 
     onSubmit(payload);
+  };
+
+  const updateStop = (index: number, patch: Partial<TripStop>) => {
+    setForm((prev) => {
+      const stops = [...(prev.stops ?? [])];
+      stops[index] = { ...stops[index], ...patch };
+      return { ...prev, stops };
+    });
   };
 
   return (
@@ -268,39 +278,6 @@ export default function TripForm({
                 className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm text-muted-foreground"
               />
             </div>
-            <div>
-              <label className="text-xs uppercase tracking-widest text-muted-foreground">
-                Road Expense Disbursed
-              </label>
-              <select
-                value={form.road_expense_disbursed ? "true" : "false"}
-                onChange={(event) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    road_expense_disbursed: event.target.value === "true",
-                  }))
-                }
-                className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
-              >
-                <option value="false">No</option>
-                <option value="true">Yes</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs uppercase tracking-widest text-muted-foreground">
-                Road Expense Reference
-              </label>
-              <input
-                value={form.road_expense_reference ?? ""}
-                onChange={(event) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    road_expense_reference: event.target.value,
-                  }))
-                }
-                className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
-              />
-            </div>
           </div>
         </div>
 
@@ -431,6 +408,137 @@ export default function TripForm({
               />
             </div>
           </div>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">
+              Extra Stops
+            </p>
+            <button
+              type="button"
+              className="rounded-xl border border-border px-3 py-1 text-xs"
+              onClick={() =>
+                setForm((prev) => ({
+                  ...prev,
+                  stops: [
+                    ...(prev.stops ?? []),
+                    {
+                      sequence: (prev.stops?.length ?? 0) + 1,
+                      destination: "",
+                      delivery_address: "",
+                      tonnage_load: "",
+                      waybill_number: "",
+                      customer_contact_name: "",
+                      customer_contact_phone: "",
+                      special_instructions: "",
+                    },
+                  ],
+                }))
+              }
+            >
+              Add Stop
+            </button>
+          </div>
+          {form.stops && form.stops.length > 0 ? (
+            <div className="mt-4 space-y-4">
+              {form.stops.map((stop, index) => (
+                <div
+                  key={index}
+                  className="rounded-2xl border border-border bg-muted/20 p-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      Stop {index + 1}
+                    </p>
+                    <button
+                      type="button"
+                      className="text-xs text-rose-500"
+                      onClick={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          stops: prev.stops?.filter((_, i) => i !== index),
+                        }))
+                      }
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <input
+                      placeholder="Destination"
+                      value={stop.destination ?? ""}
+                      onChange={(event) =>
+                        updateStop(index, { destination: event.target.value })
+                      }
+                      className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                    />
+                    <input
+                      placeholder="Delivery Address"
+                      value={stop.delivery_address ?? ""}
+                      onChange={(event) =>
+                        updateStop(index, {
+                          delivery_address: event.target.value,
+                        })
+                      }
+                      className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                    />
+                    <input
+                      placeholder="Tonnage / Load"
+                      value={stop.tonnage_load ?? ""}
+                      onChange={(event) =>
+                        updateStop(index, { tonnage_load: event.target.value })
+                      }
+                      className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                    />
+                    <input
+                      placeholder="Waybill Number"
+                      value={stop.waybill_number ?? ""}
+                      onChange={(event) =>
+                        updateStop(index, { waybill_number: event.target.value })
+                      }
+                      className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                    />
+                    <input
+                      placeholder="Customer Contact Name"
+                      value={stop.customer_contact_name ?? ""}
+                      onChange={(event) =>
+                        updateStop(index, {
+                          customer_contact_name: event.target.value,
+                        })
+                      }
+                      className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                    />
+                    <input
+                      placeholder="Customer Contact Phone"
+                      value={stop.customer_contact_phone ?? ""}
+                      onChange={(event) =>
+                        updateStop(index, {
+                          customer_contact_phone: event.target.value,
+                        })
+                      }
+                      className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                    />
+                    <textarea
+                      placeholder="Special Instructions"
+                      value={stop.special_instructions ?? ""}
+                      onChange={(event) =>
+                        updateStop(index, {
+                          special_instructions: event.target.value,
+                        })
+                      }
+                      className="md:col-span-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
+                      rows={2}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-xs text-muted-foreground">
+              No extra stops added.
+            </p>
+          )}
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchTrip } from "@/lib/api/trips";
 import TripHeader from "@/components/trips/TripHeader";
 import TripTimeline from "@/components/trips/TripTimeline";
@@ -9,10 +9,19 @@ import OdometerCard from "@/components/trips/OdometerCard";
 import GoogleMap from "@/components/maps/GoogleMap";
 import { fetchPreTrip } from "@/lib/api/pretrip";
 import { formatDate } from "@/lib/utils/format";
+import {
+  confirmPreTrip,
+  updateFuelAllocation,
+  updateRoadExpense,
+  uploadRoadExpenseReceipt,
+  verifyPreTrip,
+} from "@/lib/api/logistics";
+import { useEffect, useState } from "react";
 
 export default function TripDetailPage() {
   const params = useParams();
   const tripId = String(params?.id ?? "");
+  const queryClient = useQueryClient();
 
   const {
     data: trip,
@@ -47,6 +56,75 @@ export default function TripDetailPage() {
       </div>
     );
   }
+
+  const [verificationStatus, setVerificationStatus] = useState<
+    "approved" | "rejected"
+  >("approved");
+  const [verificationNote, setVerificationNote] = useState("");
+  const [fuelAllocation, setFuelAllocation] = useState({
+    fuel_allocated_litres: trip.fuel_allocated_litres ?? "",
+    fuel_allocation_station: trip.fuel_allocation_station ?? "",
+    fuel_allocation_payment_mode: trip.fuel_allocation_payment_mode ?? "cash",
+    fuel_allocation_reference: trip.fuel_allocation_reference ?? "",
+    fuel_allocation_note: trip.fuel_allocation_note ?? "",
+  });
+  const [roadExpense, setRoadExpense] = useState({
+    road_expense_disbursed: Boolean(trip.road_expense_disbursed),
+    road_expense_reference: trip.road_expense_reference ?? "",
+    road_expense_payment_status: trip.road_expense_payment_status ?? "pending",
+    road_expense_payment_method: trip.road_expense_payment_method ?? "cash",
+    road_expense_payment_reference: trip.road_expense_payment_reference ?? "",
+    road_expense_note: trip.road_expense_note ?? "",
+  });
+
+  useEffect(() => {
+    setFuelAllocation({
+      fuel_allocated_litres: trip.fuel_allocated_litres ?? "",
+      fuel_allocation_station: trip.fuel_allocation_station ?? "",
+      fuel_allocation_payment_mode: trip.fuel_allocation_payment_mode ?? "cash",
+      fuel_allocation_reference: trip.fuel_allocation_reference ?? "",
+      fuel_allocation_note: trip.fuel_allocation_note ?? "",
+    });
+    setRoadExpense({
+      road_expense_disbursed: Boolean(trip.road_expense_disbursed),
+      road_expense_reference: trip.road_expense_reference ?? "",
+      road_expense_payment_status: trip.road_expense_payment_status ?? "pending",
+      road_expense_payment_method: trip.road_expense_payment_method ?? "cash",
+      road_expense_payment_reference: trip.road_expense_payment_reference ?? "",
+      road_expense_note: trip.road_expense_note ?? "",
+    });
+  }, [trip.id]);
+
+  const verifyMutation = useMutation({
+    mutationFn: () =>
+      verifyPreTrip(Number(tripId), {
+        status: verificationStatus,
+        note: verificationNote || undefined,
+      }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["trip", tripId, "pre_trip"] }),
+  });
+
+  const confirmMutation = useMutation({
+    mutationFn: () => confirmPreTrip(Number(tripId)),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["trip", tripId, "pre_trip"] }),
+  });
+
+  const fuelMutation = useMutation({
+    mutationFn: () => updateFuelAllocation(Number(tripId), fuelAllocation),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["trip", tripId] }),
+  });
+
+  const roadExpenseMutation = useMutation({
+    mutationFn: () => updateRoadExpense(Number(tripId), roadExpense),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["trip", tripId] }),
+  });
+
+  const uploadReceiptMutation = useMutation({
+    mutationFn: (file: File) => uploadRoadExpenseReceipt(Number(tripId), file),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["trip", tripId] }),
+  });
 
   return (
     <div className="space-y-6">
@@ -501,6 +579,262 @@ export default function TripDetailPage() {
               </div>
             ))
           )}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+          Logistics Manager
+        </h3>
+        <div className="mt-6 grid gap-6 lg:grid-cols-3">
+          <div className="rounded-2xl border border-border bg-muted/10 p-4">
+            <h4 className="text-xs uppercase tracking-widest text-muted-foreground">
+              Pre-Trip Verification
+            </h4>
+            <div className="mt-3 space-y-2 text-xs text-muted-foreground">
+              <div>Status: {preTrip?.inspection_verification_status ?? "-"}</div>
+              <div>Verified By: {preTrip?.inspection_verified_by_id ?? "-"}</div>
+              <div>Verified At: {formatDate(preTrip?.inspection_verified_at ?? undefined)}</div>
+              <div>Note: {preTrip?.inspection_verification_note ?? "-"}</div>
+              <div>Confirmed: {preTrip?.inspection_confirmed ? "Yes" : "No"}</div>
+              <div>Confirmed By: {preTrip?.inspection_confirmed_by_id ?? "-"}</div>
+              <div>Confirmed At: {formatDate(preTrip?.inspection_confirmed_at ?? undefined)}</div>
+            </div>
+            <div className="mt-3 space-y-2">
+              <select
+                value={verificationStatus}
+                onChange={(event) =>
+                  setVerificationStatus(event.target.value as "approved" | "rejected")
+                }
+                className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+              >
+                <option value="approved">approved</option>
+                <option value="rejected">rejected</option>
+              </select>
+              <textarea
+                value={verificationNote}
+                onChange={(event) => setVerificationNote(event.target.value)}
+                placeholder="Verification note"
+                className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                rows={2}
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
+                  onClick={() => verifyMutation.mutate()}
+                >
+                  Verify
+                </button>
+                <button
+                  type="button"
+                  className="rounded-xl border border-border px-3 py-2 text-xs"
+                  onClick={() => confirmMutation.mutate()}
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-muted/10 p-4">
+            <h4 className="text-xs uppercase tracking-widest text-muted-foreground">
+              Fuel Allocation (Planned)
+            </h4>
+            <div className="mt-3 space-y-2">
+              <input
+                placeholder="Fuel allocated (litres)"
+                value={fuelAllocation.fuel_allocated_litres}
+                onChange={(event) =>
+                  setFuelAllocation((prev) => ({
+                    ...prev,
+                    fuel_allocated_litres: event.target.value,
+                  }))
+                }
+                className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+              />
+              <input
+                placeholder="Station"
+                value={fuelAllocation.fuel_allocation_station}
+                onChange={(event) =>
+                  setFuelAllocation((prev) => ({
+                    ...prev,
+                    fuel_allocation_station: event.target.value,
+                  }))
+                }
+                className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+              />
+              <select
+                value={fuelAllocation.fuel_allocation_payment_mode}
+                onChange={(event) =>
+                  setFuelAllocation((prev) => ({
+                    ...prev,
+                    fuel_allocation_payment_mode: event.target.value,
+                  }))
+                }
+                className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+              >
+                <option value="cash">cash</option>
+                <option value="card">card</option>
+                <option value="credit">credit</option>
+              </select>
+              <input
+                placeholder="Reference"
+                value={fuelAllocation.fuel_allocation_reference}
+                onChange={(event) =>
+                  setFuelAllocation((prev) => ({
+                    ...prev,
+                    fuel_allocation_reference: event.target.value,
+                  }))
+                }
+                className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+              />
+              <textarea
+                placeholder="Note"
+                value={fuelAllocation.fuel_allocation_note}
+                onChange={(event) =>
+                  setFuelAllocation((prev) => ({
+                    ...prev,
+                    fuel_allocation_note: event.target.value,
+                  }))
+                }
+                className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                rows={2}
+              />
+              <button
+                type="button"
+                className="rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
+                onClick={() => fuelMutation.mutate()}
+              >
+                Save Allocation
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-muted/10 p-4">
+            <h4 className="text-xs uppercase tracking-widest text-muted-foreground">
+              Road Expense Payment
+            </h4>
+            <div className="mt-3 space-y-2">
+              <select
+                value={roadExpense.road_expense_disbursed ? "true" : "false"}
+                onChange={(event) =>
+                  setRoadExpense((prev) => ({
+                    ...prev,
+                    road_expense_disbursed: event.target.value === "true",
+                  }))
+                }
+                className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+              >
+                <option value="false">Not Disbursed</option>
+                <option value="true">Disbursed</option>
+              </select>
+              <input
+                placeholder="Reference"
+                value={roadExpense.road_expense_reference}
+                onChange={(event) =>
+                  setRoadExpense((prev) => ({
+                    ...prev,
+                    road_expense_reference: event.target.value,
+                  }))
+                }
+                className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+              />
+              <select
+                value={roadExpense.road_expense_payment_status}
+                onChange={(event) =>
+                  setRoadExpense((prev) => ({
+                    ...prev,
+                    road_expense_payment_status: event.target.value,
+                  }))
+                }
+                className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+              >
+                <option value="pending">pending</option>
+                <option value="paid">paid</option>
+                <option value="rejected">rejected</option>
+              </select>
+              <select
+                value={roadExpense.road_expense_payment_method}
+                onChange={(event) =>
+                  setRoadExpense((prev) => ({
+                    ...prev,
+                    road_expense_payment_method: event.target.value,
+                  }))
+                }
+                className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+              >
+                <option value="cash">cash</option>
+                <option value="momo">momo</option>
+                <option value="bank">bank</option>
+              </select>
+              <input
+                placeholder="Payment Reference"
+                value={roadExpense.road_expense_payment_reference}
+                onChange={(event) =>
+                  setRoadExpense((prev) => ({
+                    ...prev,
+                    road_expense_payment_reference: event.target.value,
+                  }))
+                }
+                className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+              />
+              <textarea
+                placeholder="Note"
+                value={roadExpense.road_expense_note}
+                onChange={(event) =>
+                  setRoadExpense((prev) => ({
+                    ...prev,
+                    road_expense_note: event.target.value,
+                  }))
+                }
+                className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                rows={2}
+              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) uploadReceiptMutation.mutate(file);
+                  }}
+                  className="text-xs"
+                />
+                <button
+                  type="button"
+                  className="rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
+                  onClick={() => roadExpenseMutation.mutate()}
+                >
+                  Save Road Expense
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-border bg-muted/10 p-4">
+            <h4 className="text-xs uppercase tracking-widest text-muted-foreground">
+              Fuel Allocation (Planned)
+            </h4>
+            <div className="mt-3 text-sm text-muted-foreground">
+              <div>Litres: {trip.fuel_allocated_litres ?? "-"}</div>
+              <div>Station: {trip.fuel_allocation_station ?? "-"}</div>
+              <div>Mode: {trip.fuel_allocation_payment_mode ?? "-"}</div>
+              <div>Reference: {trip.fuel_allocation_reference ?? "-"}</div>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-border bg-muted/10 p-4">
+            <h4 className="text-xs uppercase tracking-widest text-muted-foreground">
+              Fuel Allocation (Actual)
+            </h4>
+            <div className="mt-3 text-sm text-muted-foreground">
+              <div>Litres: {trip.fuel_litres_filled ?? "-"}</div>
+              <div>Station: {trip.fuel_station_used ?? "-"}</div>
+              <div>Mode: {trip.fuel_payment_mode ?? "-"}</div>
+              <div>Receipt: {trip.fuel_receipt_no ?? "-"}</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
