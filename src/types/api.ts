@@ -52,8 +52,6 @@ export interface Trip {
   trip_date?: string | null;
   driver_contact?: string | null;
   truck_type_capacity?: string | null;
-  road_expense_disbursed?: boolean | null;
-  road_expense_reference?: string | null;
   client_name?: string | null;
   destination?: string | null;
   delivery_address?: string | null;
