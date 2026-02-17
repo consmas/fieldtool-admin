@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Trip, TripStop, User, Vehicle } from "@/types/api";
+import type { Destination, Trip, TripStop, User, Vehicle } from "@/types/api";
 
 const emptyForm: Partial<Trip> & {
   driver_id?: number | null;
@@ -40,6 +40,7 @@ function todayInputDate() {
 export interface TripFormProps {
   users: User[];
   vehicles: Vehicle[];
+  destinations?: Destination[];
   initialTrip?: Trip | null;
   submitLabel: string;
   onSubmit: (payload: Partial<Trip> & { stops?: TripStop[] }) => void;
@@ -50,6 +51,7 @@ export interface TripFormProps {
 export default function TripForm({
   users,
   vehicles,
+  destinations = [],
   initialTrip,
   submitLabel,
   onSubmit,
@@ -99,6 +101,11 @@ export default function TripForm({
   const selectedDriver = useMemo(
     () => drivers.find((d) => d.id === form.driver_id) ?? null,
     [drivers, form.driver_id]
+  );
+
+  const selectedDestination = useMemo(
+    () => destinations.find((d) => d.name === form.destination) ?? null,
+    [destinations, form.destination]
   );
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -320,8 +327,8 @@ export default function TripForm({
               <label className="text-xs uppercase tracking-widest text-muted-foreground">
                 Destination
               </label>
-              <input
-                value={form.destination ?? ""}
+              <select
+                value={selectedDestination?.name ?? ""}
                 onChange={(event) =>
                   setForm((prev) => ({
                     ...prev,
@@ -329,7 +336,14 @@ export default function TripForm({
                   }))
                 }
                 className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
-              />
+              >
+                <option value="">Select destination</option>
+                {destinations.map((dest) => (
+                  <option key={dest.id} value={dest.name}>
+                    {dest.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="text-xs uppercase tracking-widest text-muted-foreground">

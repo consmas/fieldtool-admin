@@ -6,6 +6,7 @@ import TripForm from "@/components/trips/TripForm";
 import { fetchTrip, updateTrip } from "@/lib/api/trips";
 import { fetchUsers } from "@/lib/api/users";
 import { fetchVehicles } from "@/lib/api/vehicles";
+import { fetchDestinations } from "@/lib/api/destinations";
 import type { Trip } from "@/types/api";
 
 export default function EditTripPage() {
@@ -28,6 +29,10 @@ export default function EditTripPage() {
   const { data: vehicles = [] } = useQuery({
     queryKey: ["vehicles"],
     queryFn: fetchVehicles,
+  });
+  const { data: destinations = [] } = useQuery({
+    queryKey: ["destinations"],
+    queryFn: fetchDestinations,
   });
 
   const updateMutation = useMutation({
@@ -62,6 +67,7 @@ export default function EditTripPage() {
       <TripForm
         users={users}
         vehicles={vehicles}
+        destinations={destinations}
         initialTrip={trip}
         submitLabel={
           updateMutation.isPending ? "Updating..." : "Update Trip"

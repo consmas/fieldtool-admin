@@ -7,6 +7,7 @@ import { createTrip } from "@/lib/api/trips";
 import { createTripStop } from "@/lib/api/stops";
 import { fetchUsers } from "@/lib/api/users";
 import { fetchVehicles } from "@/lib/api/vehicles";
+import { fetchDestinations } from "@/lib/api/destinations";
 import type { Trip, TripStop } from "@/types/api";
 
 export default function NewTripPage() {
@@ -20,6 +21,10 @@ export default function NewTripPage() {
   const { data: vehicles = [] } = useQuery({
     queryKey: ["vehicles"],
     queryFn: fetchVehicles,
+  });
+  const { data: destinations = [] } = useQuery({
+    queryKey: ["destinations"],
+    queryFn: fetchDestinations,
   });
 
   const createMutation = useMutation({
@@ -47,6 +52,7 @@ export default function NewTripPage() {
       <TripForm
         users={users}
         vehicles={vehicles}
+        destinations={destinations}
         submitLabel={
           createMutation.isPending ? "Creating..." : "Create Trip"
         }

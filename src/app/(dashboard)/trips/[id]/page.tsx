@@ -41,43 +41,28 @@ export default function TripDetailPage() {
     refetchInterval: 30_000,
   });
 
-  if (isLoading) {
-    return (
-      <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
-        Loading trip details...
-      </div>
-    );
-  }
-
-  if (isError || !trip) {
-    return (
-      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-600">
-        Trip not found. Verify the trip ID or API response.
-      </div>
-    );
-  }
-
   const [verificationStatus, setVerificationStatus] = useState<
     "approved" | "rejected"
   >("approved");
   const [verificationNote, setVerificationNote] = useState("");
   const [fuelAllocation, setFuelAllocation] = useState({
-    fuel_allocated_litres: trip.fuel_allocated_litres ?? "",
-    fuel_allocation_station: trip.fuel_allocation_station ?? "",
-    fuel_allocation_payment_mode: trip.fuel_allocation_payment_mode ?? "cash",
-    fuel_allocation_reference: trip.fuel_allocation_reference ?? "",
-    fuel_allocation_note: trip.fuel_allocation_note ?? "",
+    fuel_allocated_litres: "",
+    fuel_allocation_station: "",
+    fuel_allocation_payment_mode: "cash",
+    fuel_allocation_reference: "",
+    fuel_allocation_note: "",
   });
   const [roadExpense, setRoadExpense] = useState({
-    road_expense_disbursed: Boolean(trip.road_expense_disbursed),
-    road_expense_reference: trip.road_expense_reference ?? "",
-    road_expense_payment_status: trip.road_expense_payment_status ?? "pending",
-    road_expense_payment_method: trip.road_expense_payment_method ?? "cash",
-    road_expense_payment_reference: trip.road_expense_payment_reference ?? "",
-    road_expense_note: trip.road_expense_note ?? "",
+    road_expense_disbursed: false,
+    road_expense_reference: "",
+    road_expense_payment_status: "pending",
+    road_expense_payment_method: "cash",
+    road_expense_payment_reference: "",
+    road_expense_note: "",
   });
 
   useEffect(() => {
+    if (!trip) return;
     setFuelAllocation({
       fuel_allocated_litres: trip.fuel_allocated_litres ?? "",
       fuel_allocation_station: trip.fuel_allocation_station ?? "",
@@ -93,7 +78,7 @@ export default function TripDetailPage() {
       road_expense_payment_reference: trip.road_expense_payment_reference ?? "",
       road_expense_note: trip.road_expense_note ?? "",
     });
-  }, [trip.id]);
+  }, [trip]);
 
   const verifyMutation = useMutation({
     mutationFn: () =>
@@ -125,6 +110,22 @@ export default function TripDetailPage() {
     mutationFn: (file: File) => uploadRoadExpenseReceipt(Number(tripId), file),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["trip", tripId] }),
   });
+
+  if (isLoading) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
+        Loading trip details...
+      </div>
+    );
+  }
+
+  if (isError || !trip) {
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-600">
+        Trip not found. Verify the trip ID or API response.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
