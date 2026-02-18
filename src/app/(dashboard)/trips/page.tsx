@@ -188,7 +188,7 @@ export default function TripsPage() {
             </div>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
             {filterPills.map((pill) => {
               const isActive = filter === pill.key;
               return (
@@ -200,7 +200,7 @@ export default function TripsPage() {
                     setPage(1);
                   }}
                   className={[
-                    "inline-flex shrink-0 items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-semibold transition",
+                    "inline-flex shrink-0 snap-start items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-semibold transition",
                     isActive
                       ? "border-primary/40 bg-primary/15 text-primary"
                       : "border-border bg-card text-muted-foreground hover:text-foreground",
@@ -272,31 +272,37 @@ export default function TripsPage() {
                         </Link>
                         <p className="mt-1 text-xs text-muted-foreground">{getRouteText(trip)}</p>
                       </div>
-                      <TripStatusBadge status={trip.status} />
+                      <div className="space-y-2 text-right">
+                        <TripStatusBadge status={trip.status} />
+                        <label className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <input
+                            type="checkbox"
+                            checked={selected.has(trip.id)}
+                            onChange={() => toggleSelect(trip.id)}
+                            className="h-3.5 w-3.5 accent-primary"
+                          />
+                          Select
+                        </label>
+                      </div>
                     </div>
-                    <label className="mt-2 inline-flex items-center gap-2 text-xs text-muted-foreground">
-                      <input
-                        type="checkbox"
-                        checked={selected.has(trip.id)}
-                        onChange={() => toggleSelect(trip.id)}
-                        className="h-3.5 w-3.5 accent-primary"
-                      />
-                      Select
-                    </label>
                     <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted-foreground">
                       <span>{trip.driver?.name ?? "Unassigned"}</span>
                       <span>{trip.vehicle?.name ?? trip.truck_reg_no ?? "-"}</span>
                     </div>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                      <span>Pickup: {formatDate(trip.trip_date ?? trip.scheduled_pickup_at ?? undefined)}</span>
+                      <span className="text-right">Fuel: {toNumber(trip.fuel_allocated_litres) > 0 ? `${toNumber(trip.fuel_allocated_litres).toFixed(0)} L` : "-"}</span>
+                    </div>
                     <div className="mt-3 grid grid-cols-3 gap-2">
-                      <Link href={`/trips/${trip.id}`} className="rounded-md border border-border px-2 py-1 text-center text-xs text-muted-foreground">
+                      <Link href={`/trips/${trip.id}`} className="rounded-md border border-border px-2 py-2 text-center text-xs text-muted-foreground">
                         View
                       </Link>
-                      <Link href={`/trips/${trip.id}/edit`} className="rounded-md border border-border px-2 py-1 text-center text-xs text-muted-foreground">
+                      <Link href={`/trips/${trip.id}/edit`} className="rounded-md border border-border px-2 py-2 text-center text-xs text-muted-foreground">
                         Edit
                       </Link>
                       <button
                         type="button"
-                        className="rounded-md border border-rose-500/40 bg-rose-500/10 px-2 py-1 text-xs text-rose-300"
+                        className="rounded-md border border-rose-500/40 bg-rose-500/10 px-2 py-2 text-xs text-rose-300"
                         onClick={() => {
                           if (window.confirm("Delete this trip?")) deleteMutation.mutate(trip.id);
                         }}
@@ -406,21 +412,21 @@ export default function TripsPage() {
               Showing {(currentPage - 1) * pageSize + (pageTrips.length ? 1 : 0)}-
               {(currentPage - 1) * pageSize + pageTrips.length} of {filteredTrips.length}
             </span>
-            <div className="flex items-center gap-1">
+            <div className="grid w-full grid-cols-3 gap-1 sm:flex sm:w-auto sm:items-center">
               <button
                 type="button"
-                className="rounded border border-border px-2 py-1 disabled:opacity-40"
+                className="rounded border border-border px-2 py-1 text-center disabled:opacity-40"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage <= 1}
               >
                 Prev
               </button>
-              <span className="px-2">
+              <span className="px-2 text-center">
                 {currentPage} / {totalPages}
               </span>
               <button
                 type="button"
-                className="rounded border border-border px-2 py-1 disabled:opacity-40"
+                className="rounded border border-border px-2 py-1 text-center disabled:opacity-40"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage >= totalPages}
               >
