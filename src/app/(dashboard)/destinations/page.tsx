@@ -73,7 +73,7 @@ export default function DestinationsPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="rounded-2xl border border-border bg-card p-6"
+        className="ops-card p-6"
       >
         <div className="grid gap-4 md:grid-cols-2">
           <div>
@@ -178,7 +178,7 @@ export default function DestinationsPage() {
       </form>
 
       {isLoading ? (
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
+        <div className="ops-card p-6 text-sm text-muted-foreground">
           Loading destinations...
         </div>
       ) : isError ? (
@@ -186,8 +186,9 @@ export default function DestinationsPage() {
           Unable to load destinations.
         </div>
       ) : (
-        <div className="rounded-2xl border border-border bg-card p-4">
-          <table className="w-full text-sm">
+        <div className="ops-card p-4">
+          <div className="overflow-x-auto">
+          <table className="min-w-[780px] w-full text-sm">
             <thead className="text-left text-xs uppercase tracking-widest text-muted-foreground">
               <tr>
                 <th className="py-2">Name</th>
@@ -237,6 +238,7 @@ export default function DestinationsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

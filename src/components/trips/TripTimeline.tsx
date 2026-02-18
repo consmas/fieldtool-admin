@@ -13,7 +13,7 @@ export default function TripTimeline({ events }: { events?: Trip["events"] }) {
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
+    <div className="ops-card p-6">
       <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
         Timeline
       </h3>

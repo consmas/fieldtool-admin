@@ -116,7 +116,7 @@ export default function UsersPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="rounded-2xl border border-border bg-card p-6"
+        className="ops-card p-6"
       >
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
@@ -229,7 +229,7 @@ export default function UsersPage() {
           </p>
         ) : null}
 
-        <div className="mt-4 flex gap-3">
+        <div className="mt-4 flex flex-wrap gap-3">
           <button
             type="submit"
             className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
@@ -241,7 +241,7 @@ export default function UsersPage() {
       </form>
 
       {isLoading ? (
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
+        <div className="ops-card p-6 text-sm text-muted-foreground">
           Loading users...
         </div>
       ) : isError ? (
@@ -249,8 +249,9 @@ export default function UsersPage() {
           Unable to load users. Confirm API connectivity.
         </div>
       ) : (
-        <div className="rounded-2xl border border-border bg-card p-4">
-          <table className="w-full text-sm">
+        <div className="ops-card p-4">
+          <div className="overflow-x-auto">
+          <table className="min-w-[760px] w-full text-sm">
             <thead className="text-left text-xs uppercase tracking-widest text-muted-foreground">
               <tr>
                 <th className="py-2">Name</th>
@@ -301,6 +302,7 @@ export default function UsersPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

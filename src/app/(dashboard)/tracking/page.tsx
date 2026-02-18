@@ -27,13 +27,13 @@ export default function TrackingPage() {
       </div>
 
       {isLoading ? (
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
+        <div className="ops-card p-6 text-sm text-muted-foreground">
           Loading tracking data...
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           {activeTrips.map((trip) => (
-            <div key={trip.id} className="rounded-2xl border border-border bg-card p-6">
+            <div key={trip.id} className="ops-card p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-widest text-muted-foreground">
@@ -52,7 +52,7 @@ export default function TrackingPage() {
             </div>
           ))}
           {activeTrips.length === 0 ? (
-            <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
+            <div className="ops-card p-6 text-sm text-muted-foreground">
               No active trips to track.
             </div>
           ) : null}

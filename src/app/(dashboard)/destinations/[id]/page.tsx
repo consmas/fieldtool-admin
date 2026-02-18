@@ -47,7 +47,7 @@ export default function DestinationDetailPage() {
 
   if (isLoading || !destination) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
+      <div className="ops-card p-6 text-sm text-muted-foreground">
         Loading destination...
       </div>
     );
@@ -64,7 +64,7 @@ export default function DestinationDetailPage() {
         <h2 className="text-xl font-semibold">{destination.name}</h2>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-6">
+      <div className="ops-card p-6">
         <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
           Details
         </h3>
@@ -149,7 +149,7 @@ export default function DestinationDetailPage() {
         </button>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-6">
+      <div className="ops-card p-6">
         <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
           Rate Calculator
         </h3>

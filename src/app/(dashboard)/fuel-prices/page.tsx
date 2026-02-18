@@ -43,8 +43,8 @@ export default function FuelPricesPage() {
         <h2 className="text-xl font-semibold">Reference Table</h2>
       </div>
 
-      <form onSubmit={handleSubmit} className="rounded-2xl border border-border bg-card p-6">
-        <div className="grid gap-4 md:grid-cols-2">
+      <form onSubmit={handleSubmit} className="ops-card p-6">
+        <div className="grid gap-4 sm:grid-cols-2">
           <input
             placeholder="Price per liter"
             value={form.price_per_liter}
@@ -69,14 +69,15 @@ export default function FuelPricesPage() {
       </form>
 
       {isLoading ? (
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">Loading...</div>
+        <div className="ops-card p-6 text-sm text-muted-foreground">Loading...</div>
       ) : isError ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-600">
           Unable to load fuel prices.
         </div>
       ) : (
-        <div className="rounded-2xl border border-border bg-card p-4">
-          <table className="w-full text-sm">
+        <div className="ops-card p-4">
+          <div className="overflow-x-auto">
+          <table className="min-w-[480px] w-full text-sm">
             <thead className="text-left text-xs uppercase tracking-widest text-muted-foreground">
               <tr>
                 <th className="py-2">Price / Liter</th>
@@ -92,6 +93,7 @@ export default function FuelPricesPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

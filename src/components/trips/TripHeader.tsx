@@ -4,7 +4,7 @@ import { formatDate } from "@/lib/utils/format";
 
 export default function TripHeader({ trip }: { trip: Trip }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
+    <div className="ops-card p-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-widest text-muted-foreground">

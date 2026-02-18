@@ -151,7 +151,7 @@ export default function TripChatThreadPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="ops-card p-4">
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Loading conversation...</p>
         ) : isError ? (
@@ -204,7 +204,7 @@ export default function TripChatThreadPage() {
             </div>
 
             <form
-              className="mt-3 flex gap-2"
+              className="mt-3 flex flex-col gap-2 sm:flex-row"
               onSubmit={(event) => {
                 event.preventDefault();
                 queueSend(body);

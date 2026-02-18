@@ -10,7 +10,7 @@ export default function EvidenceGallery({
   const items = evidence ?? [];
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
+    <div className="ops-card p-6">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
           {title}

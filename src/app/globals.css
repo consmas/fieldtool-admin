@@ -2,32 +2,32 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
+  --background: #08090c;
+  --foreground: #e2e8f0;
+  --card: #0e1117;
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.31 0.03 260.89);
+  --popover: #151921;
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.63 0.2 264.02);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
+  --primary: #3b82f6;
+  --primary-foreground: #f8fbff;
+  --secondary: #151b25;
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.37 0.04 257.29);
+  --muted: #151921;
+  --muted-foreground: #8694a9;
+  --accent: #1c2230;
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --sidebar: oklch(0.205 0 0);
+  --destructive: #ef4444;
+  --border: #232d3f;
+  --input: #2e3b52;
+  --ring: #3b82f6;
+  --sidebar: #08090c;
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary: #3b82f6;
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent: #151921;
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-border: #232d3f;
+  --sidebar-ring: #3b82f6;
 }
 
 @theme inline {
@@ -72,7 +72,10 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-geist-sans), "Space Grotesk", system-ui, sans-serif;
+    font-family: var(--font-geist-sans), system-ui, sans-serif;
+    background-image: radial-gradient(circle at 15% -20%, rgba(59, 130, 246, 0.16), transparent 40%),
+      radial-gradient(circle at 120% 120%, rgba(99, 102, 241, 0.12), transparent 35%);
+    background-attachment: fixed;
   }
 
   .scrollbar-thin::-webkit-scrollbar {
@@ -104,5 +107,18 @@
   textarea,
   select {
     @apply bg-card text-foreground placeholder:text-muted-foreground;
+  }
+
+  .ops-card {
+    @apply rounded-xl border border-border bg-card/95 backdrop-blur-sm;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 16px 30px rgba(0, 0, 0, 0.25);
+  }
+
+  .ops-section-title {
+    @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground;
+  }
+
+  .ops-shell {
+    background-image: linear-gradient(180deg, rgba(14, 17, 23, 0.95), rgba(8, 9, 12, 0.95));
   }
 }

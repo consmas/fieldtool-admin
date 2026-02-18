@@ -11,9 +11,32 @@ export default function TripsTable({
   onDelete?: (trip: Trip) => void;
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card">
-      <table className="w-full text-sm">
-        <thead className="bg-muted text-left text-xs uppercase tracking-widest text-muted-foreground">
+    <div className="ops-card overflow-hidden">
+      <div className="md:hidden space-y-2 p-3">
+        {trips.map((trip) => (
+          <div key={trip.id} className="rounded-lg border border-border bg-card p-3">
+            <div className="flex items-start justify-between gap-3">
+              <Link href={`/trips/${trip.id}`} className="font-semibold text-foreground hover:text-primary">
+                {trip.waybill_number ?? trip.reference_code ?? `Trip ${trip.id}`}
+              </Link>
+              <TripStatusBadge status={trip.status} />
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">{trip.client_name ?? "-"}</p>
+            <p className="text-xs text-muted-foreground">{trip.destination ?? trip.dropoff_location ?? "-"}</p>
+            <p className="text-xs text-muted-foreground">{trip.driver?.name ?? "Unassigned"} • {trip.vehicle?.name ?? "-"}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Link href={`/trips/${trip.id}`} className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground">View</Link>
+              <Link href={`/trips/${trip.id}/edit`} className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground">Edit</Link>
+              <Link href={`/trip-chats/${trip.id}`} className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground">Chat</Link>
+              <button type="button" className="rounded-md border border-rose-500/40 bg-rose-500/10 px-2 py-1 text-xs text-rose-300" onClick={() => onDelete?.(trip)}>Delete</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto md:block">
+      <table className="min-w-[980px] w-full text-sm">
+        <thead className="bg-muted/60 text-left text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
           <tr>
             <th className="px-5 py-4">Waybill</th>
             <th className="px-5 py-4">Client</th>
@@ -29,12 +52,12 @@ export default function TripsTable({
           {trips.map((trip) => (
             <tr
               key={trip.id}
-              className="border-t border-border transition hover:bg-muted/50"
+              className="border-t border-border/80 transition hover:bg-accent/50"
             >
               <td className="px-5 py-4">
                 <Link
                   href={`/trips/${trip.id}`}
-                  className="font-semibold text-foreground hover:text-primary"
+                  className="font-semibold text-foreground hover:text-primary hover:underline"
                 >
                   {trip.waybill_number ?? trip.reference_code ?? `Trip ${trip.id}`}
                 </Link>
@@ -74,19 +97,19 @@ export default function TripsTable({
                 <div className="flex justify-end gap-2">
                   <Link
                     href={`/trips/${trip.id}`}
-                    className="rounded-lg border border-border px-3 py-1 text-xs"
+                    className="rounded-md border border-border bg-card px-3 py-1 text-xs text-muted-foreground transition hover:text-foreground"
                   >
                     View
                   </Link>
                   <Link
                     href={`/trips/${trip.id}/edit`}
-                    className="rounded-lg border border-border px-3 py-1 text-xs"
+                    className="rounded-md border border-border bg-card px-3 py-1 text-xs text-muted-foreground transition hover:text-foreground"
                   >
                     Edit
                   </Link>
                   <Link
                     href={`/trip-chats/${trip.id}`}
-                    className="rounded-lg border border-border px-3 py-1 text-xs"
+                    className="rounded-md border border-border bg-card px-3 py-1 text-xs text-muted-foreground transition hover:text-foreground"
                   >
                     Chat
                   </Link>
@@ -102,14 +125,14 @@ export default function TripsTable({
                       }
                       target="_blank"
                       rel="noreferrer"
-                      className="rounded-lg border border-border px-3 py-1 text-xs"
+                      className="rounded-md border border-border bg-card px-3 py-1 text-xs text-muted-foreground transition hover:text-foreground"
                     >
                       Map
                     </a>
                   ) : null}
                   <button
                     type="button"
-                    className="rounded-lg border border-border px-3 py-1 text-xs text-rose-500"
+                    className="rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-1 text-xs text-rose-300"
                     onClick={() => onDelete?.(trip)}
                   >
                     Delete
@@ -120,6 +143,7 @@ export default function TripsTable({
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

@@ -25,7 +25,7 @@ export default function TripChatsPage() {
       </div>
 
       {isLoading ? (
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
+        <div className="ops-card p-6 text-sm text-muted-foreground">
           Loading chat inbox...
         </div>
       ) : isError ? (
@@ -33,12 +33,13 @@ export default function TripChatsPage() {
           Unable to load chat inbox.
         </div>
       ) : threads.length === 0 ? (
-        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
+        <div className="ops-card p-6 text-sm text-muted-foreground">
           No trip chats yet.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-border bg-card">
-          <table className="w-full text-sm">
+        <div className="ops-card overflow-hidden">
+          <div className="overflow-x-auto">
+          <table className="min-w-[720px] w-full text-sm">
             <thead className="bg-muted text-left text-xs uppercase tracking-widest text-muted-foreground">
               <tr>
                 <th className="px-5 py-4">Trip</th>
@@ -84,9 +85,9 @@ export default function TripChatsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>
   );
 }
-

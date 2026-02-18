@@ -166,8 +166,8 @@ export default function LogisticsPage() {
         <p className="text-sm text-muted-foreground">Verify inspections, allocate fuel, and manage road expenses.</p>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-4">
-        <div className="grid gap-3 md:grid-cols-5">
+      <div className="ops-card p-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <input
             placeholder="Status"
             value={filters.status}
@@ -209,14 +209,14 @@ export default function LogisticsPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[2fr_3fr]">
-        <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="grid gap-6 xl:grid-cols-[2fr_3fr]">
+        <div className="ops-card p-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">Trips</h3>
             <span className="text-xs text-muted-foreground">{filteredTrips.length} trips</span>
           </div>
 
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
               className="rounded-xl border border-border px-3 py-1 text-xs"
@@ -286,7 +286,7 @@ export default function LogisticsPage() {
           )}
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-4">
+        <div className="ops-card p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs uppercase tracking-widest text-muted-foreground">Workflow</p>
@@ -296,7 +296,7 @@ export default function LogisticsPage() {
                   : "Select a trip"}
               </h3>
             </div>
-            <div className="flex gap-2 text-xs">
+            <div className="flex flex-wrap gap-2 text-xs">
               {TABS.map((key) => (
                 <button
                   key={key}
@@ -340,7 +340,7 @@ export default function LogisticsPage() {
                 className="w-full rounded-xl border border-border px-3 py-2 text-sm"
                 rows={2}
               />
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   className="rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
@@ -470,7 +470,7 @@ export default function LogisticsPage() {
                 className="w-full rounded-xl border border-border px-3 py-2 text-sm"
                 rows={2}
               />
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <input
                   type="file"
                   onChange={(event) => {
