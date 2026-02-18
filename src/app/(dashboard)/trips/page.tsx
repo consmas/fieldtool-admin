@@ -147,19 +147,19 @@ export default function TripsPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 md:gap-4">
         <div>
           <p className="ops-section-title">Trips</p>
-          <h2 className="text-xl font-semibold">Trip Monitor</h2>
+          <h2 className="text-lg font-semibold md:text-xl">Trip Monitor</h2>
           <p className="text-sm text-muted-foreground">
             Operational queue with fast filters, selection, and quick actions.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 sm:w-auto">
           <Link
             href="/trips/new"
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground sm:w-auto"
           >
             <Plus className="h-4 w-4" />
             Create Trip
@@ -167,7 +167,7 @@ export default function TripsPage() {
         </div>
       </div>
 
-      <div className="ops-card p-4">
+      <div className="ops-card p-3 sm:p-4">
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="relative w-full md:max-w-sm">
@@ -188,7 +188,7 @@ export default function TripsPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2 overflow-x-auto pb-1">
             {filterPills.map((pill) => {
               const isActive = filter === pill.key;
               return (
@@ -200,7 +200,7 @@ export default function TripsPage() {
                     setPage(1);
                   }}
                   className={[
-                    "inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-semibold transition",
+                    "inline-flex shrink-0 items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-semibold transition",
                     isActive
                       ? "border-primary/40 bg-primary/15 text-primary"
                       : "border-border bg-card text-muted-foreground hover:text-foreground",
@@ -219,7 +219,7 @@ export default function TripsPage() {
 
       {selected.size > 0 ? (
         <div className="rounded-lg border border-primary/30 bg-primary/10 p-3">
-          <div className="flex flex-wrap items-center gap-2 text-sm">
+          <div className="flex flex-col gap-2 text-sm sm:flex-row sm:flex-wrap sm:items-center">
             <span className="font-semibold text-primary">{selected.size} selected</span>
             <button
               type="button"
@@ -274,15 +274,24 @@ export default function TripsPage() {
                       </div>
                       <TripStatusBadge status={trip.status} />
                     </div>
+                    <label className="mt-2 inline-flex items-center gap-2 text-xs text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(trip.id)}
+                        onChange={() => toggleSelect(trip.id)}
+                        className="h-3.5 w-3.5 accent-primary"
+                      />
+                      Select
+                    </label>
                     <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted-foreground">
                       <span>{trip.driver?.name ?? "Unassigned"}</span>
                       <span>{trip.vehicle?.name ?? trip.truck_reg_no ?? "-"}</span>
                     </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Link href={`/trips/${trip.id}`} className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground">
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      <Link href={`/trips/${trip.id}`} className="rounded-md border border-border px-2 py-1 text-center text-xs text-muted-foreground">
                         View
                       </Link>
-                      <Link href={`/trips/${trip.id}/edit`} className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground">
+                      <Link href={`/trips/${trip.id}/edit`} className="rounded-md border border-border px-2 py-1 text-center text-xs text-muted-foreground">
                         Edit
                       </Link>
                       <button
@@ -392,7 +401,7 @@ export default function TripsPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+          <div className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <span>
               Showing {(currentPage - 1) * pageSize + (pageTrips.length ? 1 : 0)}-
               {(currentPage - 1) * pageSize + pageTrips.length} of {filteredTrips.length}

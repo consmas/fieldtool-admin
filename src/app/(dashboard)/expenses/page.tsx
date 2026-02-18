@@ -454,7 +454,70 @@ export default function ExpensesPage() {
         </div>
       ) : (
         <section className="ops-card overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="space-y-2 p-3 md:hidden">
+            {expenses.length === 0 ? (
+              <div className="rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+                No expenses found.
+              </div>
+            ) : (
+              expenses.map((row) => (
+                <article key={`mobile-${row.id}`} className="rounded-lg border border-border bg-card p-3">
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    <p className="font-semibold text-foreground">{getExpenseCategoryLabel(row.category)}</p>
+                    <span className={`inline-flex rounded-md border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${statusClasses(row.status)}`}>
+                      {row.status ?? "draft"}
+                    </span>
+                  </div>
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-muted-foreground">Description</span>
+                      <span className="text-right text-foreground">{row.description ?? "-"}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-muted-foreground">Amount</span>
+                      <span className="text-right font-semibold text-foreground">
+                        {formatCurrency(asNumber(row.amount), row.currency ?? "GHS")}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-muted-foreground">Trip / Vehicle / Driver</span>
+                      <span className="text-right text-foreground">
+                        {row.trip_id ?? "-"} / {row.vehicle_id ?? "-"} / {row.driver_id ?? "-"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-muted-foreground">Date</span>
+                      <span className="text-right text-foreground">{formatDate(row.expense_date ?? row.created_at ?? undefined)}</span>
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => submitMutation.mutate(row.id)}
+                      className="rounded border border-border bg-card px-2 py-1 text-[11px] text-muted-foreground"
+                    >
+                      Submit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => approveMutation.mutate(row.id)}
+                      className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[11px] text-emerald-300"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => markPaidMutation.mutate(row.id)}
+                      className="rounded border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-[11px] text-sky-300"
+                    >
+                      Paid
+                    </button>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
             <table className="min-w-[1180px] w-full text-sm">
               <thead className="bg-muted/60 text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
                 <tr>

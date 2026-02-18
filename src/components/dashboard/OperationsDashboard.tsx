@@ -194,7 +194,7 @@ export default function OperationsDashboard() {
 
       <section className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
         <div className="ops-card overflow-hidden">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
             <h3 className="text-sm font-semibold text-foreground">Alert Feed</h3>
             <Link href="/logistics" className="text-xs text-primary hover:underline">
               Open Logistics
@@ -230,9 +230,9 @@ export default function OperationsDashboard() {
             <span className="text-xs text-muted-foreground">{mapTrips.length} live points</span>
           </div>
 
-          <div className="relative min-h-[320px] bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.12),transparent_45%),radial-gradient(circle_at_80%_85%,rgba(99,102,241,0.12),transparent_40%)]">
+          <div className="relative min-h-[240px] bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.12),transparent_45%),radial-gradient(circle_at_80%_85%,rgba(99,102,241,0.12),transparent_40%)] sm:min-h-[280px] md:min-h-[320px]">
             {mapTrips.length === 0 ? (
-              <div className="flex min-h-[320px] items-center justify-center text-sm text-muted-foreground">
+              <div className="flex min-h-[240px] items-center justify-center text-sm text-muted-foreground sm:min-h-[280px] md:min-h-[320px]">
                 No live coordinates yet.
               </div>
             ) : (
@@ -244,7 +244,7 @@ export default function OperationsDashboard() {
                       "h-3 w-3 rounded-full border-2 border-background",
                       p.status === "blocked" ? "bg-rose-400" : p.status === "delayed" ? "bg-amber-400" : "bg-sky-400",
                     ].join(" ")} />
-                    <div className="mt-1 rounded border border-border bg-background/85 px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+                    <div className="mt-1 hidden rounded border border-border bg-background/85 px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground sm:block">
                       {p.ref}
                     </div>
                   </div>
@@ -270,7 +270,30 @@ export default function OperationsDashboard() {
           </Link>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="space-y-2 p-3 md:hidden">
+          {isLoading ? <p className="text-sm text-muted-foreground">Loading trips...</p> : null}
+          {isError ? <p className="text-sm text-rose-300">Failed to load trips.</p> : null}
+          {!isLoading && !isError && recentTrips.length === 0 ? <p className="text-sm text-muted-foreground">No trips available.</p> : null}
+          {!isLoading && !isError
+            ? recentTrips.slice(0, 6).map((trip) => (
+                <Link key={trip.id} href={`/trips/${trip.id}`} className="block rounded-lg border border-border bg-card/70 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="font-semibold text-foreground">{trip.waybill_number ?? trip.reference_code ?? `Trip ${trip.id}`}</p>
+                    <TripStatusBadge status={trip.status} />
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {trip.pickup_location ?? "-"} → {trip.destination ?? trip.dropoff_location ?? "-"}
+                  </p>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                    <p>{trip.driver?.name ?? "Unassigned"}</p>
+                    <p className="text-right">{trip.vehicle?.name ?? trip.truck_reg_no ?? "-"}</p>
+                  </div>
+                </Link>
+              ))
+            : null}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="min-w-[860px] w-full text-sm">
             <thead className="bg-muted/60 text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
               <tr>

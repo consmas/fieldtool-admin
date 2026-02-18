@@ -25,7 +25,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       ) : null}
       <div className="flex min-h-screen flex-1 flex-col md:pl-64">
         <Topbar onMenuClick={openMobileSidebar} />
-        <main className="flex-1 px-6 py-6">{children}</main>
+        <main className="flex-1 px-3 py-4 sm:px-4 sm:py-5 md:px-6 md:py-6">{children}</main>
       </div>
     </div>
   );

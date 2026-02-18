@@ -1,72 +1,29 @@
 "use client";
 
-import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFuelPrice, fetchFuelPrices } from "@/lib/api/fuel_prices";
-import type { FuelPrice } from "@/types/api";
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { fetchFuelPrices } from "@/lib/api/fuel_prices";
 
 export default function FuelPricesPage() {
-  const queryClient = useQueryClient();
   const { data: prices = [], isLoading, isError } = useQuery({
     queryKey: ["fuel_prices"],
     queryFn: fetchFuelPrices,
   });
 
-  const [form, setForm] = useState(() => ({
-    price_per_liter: "",
-    effective_at: new Date().toISOString().slice(0, 16),
-  }));
-
-  const createMutation = useMutation({
-    mutationFn: createFuelPrice,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["fuel_prices"] });
-      setForm({
-        price_per_liter: "",
-        effective_at: new Date().toISOString().slice(0, 16),
-      });
-    },
-  });
-
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    createMutation.mutate({
-      price_per_liter: Number(form.price_per_liter),
-      effective_at: form.effective_at || new Date().toISOString(),
-    } as Partial<FuelPrice>);
-  };
-
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">Fuel Prices</p>
-        <h2 className="text-xl font-semibold">Reference Table</h2>
-      </div>
-
-      <form onSubmit={handleSubmit} className="ops-card p-6">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <input
-            placeholder="Price per liter"
-            value={form.price_per_liter}
-            onChange={(event) => setForm((prev) => ({ ...prev, price_per_liter: event.target.value }))}
-            type="number"
-            className="rounded-xl border border-border px-3 py-2 text-sm"
-          />
-          <input
-            placeholder="Effective at"
-            value={form.effective_at}
-            onChange={(event) => setForm((prev) => ({ ...prev, effective_at: event.target.value }))}
-            type="datetime-local"
-            className="rounded-xl border border-border px-3 py-2 text-sm"
-          />
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">Fuel Prices</p>
+          <h2 className="text-lg font-semibold md:text-xl">Reference Table</h2>
         </div>
-        <button
-          type="submit"
-          className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+        <Link
+          href="/fuel-prices/new"
+          className="w-full rounded-xl bg-primary px-4 py-2 text-center text-sm font-semibold text-primary-foreground sm:w-auto"
         >
           Add Fuel Price
-        </button>
-      </form>
+        </Link>
+      </div>
 
       {isLoading ? (
         <div className="ops-card p-6 text-sm text-muted-foreground">Loading...</div>
@@ -75,26 +32,54 @@ export default function FuelPricesPage() {
           Unable to load fuel prices.
         </div>
       ) : (
-        <div className="ops-card p-4">
-          <div className="overflow-x-auto">
-          <table className="min-w-[480px] w-full text-sm">
-            <thead className="text-left text-xs uppercase tracking-widest text-muted-foreground">
-              <tr>
-                <th className="py-2">Price / Liter</th>
-                <th className="py-2">Effective At</th>
-              </tr>
-            </thead>
-            <tbody>
-              {prices.map((price) => (
-                <tr key={price.id} className="border-t border-border">
-                  <td className="py-3">{price.price_per_liter}</td>
-                  <td className="py-3 text-muted-foreground">{price.effective_at}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <>
+          <div className="space-y-2 md:hidden">
+            {prices.map((price) => (
+              <div key={price.id} className="ops-card p-3">
+                <p className="text-xs text-muted-foreground">Price / Liter</p>
+                <p className="text-base font-semibold text-foreground">{price.price_per_liter}</p>
+                <p className="mt-2 text-xs text-muted-foreground">Effective At</p>
+                <p className="text-sm text-foreground">{price.effective_at}</p>
+                <Link
+                  href={`/fuel-prices/${price.id}/edit`}
+                  className="mt-3 inline-flex w-full items-center justify-center rounded-lg border border-border px-3 py-2 text-xs"
+                >
+                  Edit
+                </Link>
+              </div>
+            ))}
           </div>
-        </div>
+
+          <div className="ops-card hidden p-4 md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[480px] text-sm">
+                <thead className="text-left text-xs uppercase tracking-widest text-muted-foreground">
+                  <tr>
+                    <th className="py-2">Price / Liter</th>
+                    <th className="py-2">Effective At</th>
+                    <th className="py-2">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {prices.map((price) => (
+                    <tr key={price.id} className="border-t border-border">
+                      <td className="py-3">{price.price_per_liter}</td>
+                      <td className="py-3 text-muted-foreground">{price.effective_at}</td>
+                      <td className="py-3">
+                        <Link
+                          href={`/fuel-prices/${price.id}/edit`}
+                          className="rounded-lg border border-border px-3 py-1 text-xs"
+                        >
+                          Edit
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

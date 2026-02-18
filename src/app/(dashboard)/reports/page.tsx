@@ -217,38 +217,50 @@ function SimpleTable({
       <div className="border-b border-border px-4 py-3">
         <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       </div>
-      <div className="overflow-x-auto">
-        <table className="min-w-[680px] w-full text-sm">
-          <thead className="bg-muted/60 text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-            <tr>
-              {columns.map((column) => (
-                <th key={column} className="px-4 py-3">
-                  {column}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={columns.length} className="px-4 py-6 text-sm text-muted-foreground">
-                  No rows available.
-                </td>
-              </tr>
-            ) : (
-              rows.map((row, index) => (
-                <tr key={`${title}-${index}`} className="border-t border-border/80">
-                  {row.map((cell, cellIdx) => (
-                    <td key={`${title}-${index}-${cellIdx}`} className="px-4 py-3 text-muted-foreground">
-                      {cell}
-                    </td>
+      {rows.length === 0 ? (
+        <div className="px-4 py-6 text-sm text-muted-foreground">No rows available.</div>
+      ) : (
+        <>
+          <div className="space-y-2 p-3 md:hidden">
+            {rows.map((row, idx) => (
+              <article key={`${title}-m-${idx}`} className="rounded-lg border border-border bg-card p-3">
+                <div className="space-y-1.5">
+                  {columns.map((column, columnIdx) => (
+                    <div key={`${title}-m-${idx}-${columnIdx}`} className="flex items-start justify-between gap-3 text-xs">
+                      <span className="text-muted-foreground">{column}</span>
+                      <span className="text-right text-foreground">{row[columnIdx] ?? "-"}</span>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
+            <table className="min-w-[680px] w-full text-sm">
+              <thead className="bg-muted/60 text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                <tr>
+                  {columns.map((column) => (
+                    <th key={column} className="px-4 py-3">
+                      {column}
+                    </th>
                   ))}
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody>
+                {rows.map((row, index) => (
+                  <tr key={`${title}-${index}`} className="border-t border-border/80">
+                    {row.map((cell, cellIdx) => (
+                      <td key={`${title}-${index}-${cellIdx}`} className="px-4 py-3 text-muted-foreground">
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </section>
   );
 }

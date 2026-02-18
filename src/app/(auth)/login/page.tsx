@@ -45,7 +45,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="fixed right-4 top-4 z-20">
+      <div className="fixed right-3 top-3 z-20 sm:right-4 sm:top-4">
         <ThemeToggle />
       </div>
       <div className="grid min-h-screen lg:grid-cols-[1.1fr_0.9fr]">
@@ -78,8 +78,14 @@ export default function LoginPage() {
           </div>
         </section>
 
-        <section className="flex items-center justify-center px-4 py-8 sm:px-6 lg:px-10">
-          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-[0_18px_60px_rgba(0,0,0,0.35)] sm:p-8">
+        <section className="flex items-center justify-center px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-[0_18px_60px_rgba(0,0,0,0.35)] sm:p-8">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-lg border border-border bg-background px-2.5 py-1.5 lg:hidden">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-[10px] font-bold text-primary-foreground">
+                AX
+              </div>
+              <p className="text-xs font-semibold tracking-tight">Axle Admin</p>
+            </div>
             <div className="mb-6">
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
                 Axle

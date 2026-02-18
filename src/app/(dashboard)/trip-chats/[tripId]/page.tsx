@@ -122,36 +122,36 @@ export default function TripChatThreadPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-widest text-muted-foreground">
             Trip Chats
           </p>
-          <h2 className="text-xl font-semibold">
+          <h2 className="text-lg font-semibold md:text-xl">
             {thread?.trip_reference ?? `Trip ${tripId}`}
           </h2>
           <p className="text-sm text-muted-foreground">
             Status: {thread?.trip_status ?? "-"}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
           <Link
             href={`/trips/${tripId}`}
-            className="rounded-xl border border-border px-3 py-2 text-xs"
+            className="rounded-xl border border-border px-3 py-2 text-center text-xs"
           >
             Trip Detail
           </Link>
           <Link
             href="/trip-chats"
-            className="rounded-xl border border-border px-3 py-2 text-xs"
+            className="rounded-xl border border-border px-3 py-2 text-center text-xs"
           >
             Back to Inbox
           </Link>
         </div>
       </div>
 
-      <div className="ops-card p-4">
+      <div className="ops-card p-3 sm:p-4">
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Loading conversation...</p>
         ) : isError ? (
@@ -174,7 +174,7 @@ export default function TripChatThreadPage() {
                       className={`flex ${isMine ? "justify-end" : "justify-start"}`}
                     >
                       <div
-                        className={`max-w-[80%] rounded-xl px-3 py-2 text-sm ${
+                        className={`max-w-[90%] rounded-xl px-3 py-2 text-sm sm:max-w-[80%] ${
                           isMine
                             ? "bg-primary/20 text-foreground"
                             : "bg-background border border-border"
@@ -219,7 +219,7 @@ export default function TripChatThreadPage() {
               <button
                 type="submit"
                 disabled={!body.trim()}
-                className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                className="w-full rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50 sm:w-auto"
               >
                 Send
               </button>
