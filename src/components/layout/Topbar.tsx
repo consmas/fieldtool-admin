@@ -2,6 +2,7 @@
 
 import { Bell, Menu, Search } from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
+import ThemeToggle from "@/components/theme/ThemeToggle";
 
 export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const user = useAuthStore((state) => state.user);
@@ -31,6 +32,7 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
               className="w-64 border-none bg-transparent p-0 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
             />
           </label>
+          <ThemeToggle />
           <button className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition hover:text-foreground">
             <Bell className="h-4 w-4" />
           </button>

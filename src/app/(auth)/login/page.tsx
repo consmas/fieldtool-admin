@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { login, extractToken } from "@/lib/api/auth";
 import { useAuthStore } from "@/stores/auth.store";
+import ThemeToggle from "@/components/theme/ThemeToggle";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -44,6 +45,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <div className="fixed right-4 top-4 z-20">
+        <ThemeToggle />
+      </div>
       <div className="grid min-h-screen lg:grid-cols-[1.1fr_0.9fr]">
         <section className="relative hidden overflow-hidden border-r border-border bg-[radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.22),transparent_48%),radial-gradient(circle_at_80%_80%,rgba(14,165,233,0.18),transparent_42%)] lg:block">
           <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(100,116,139,0.16)_1px,transparent_1px),linear-gradient(to_bottom,rgba(100,116,139,0.16)_1px,transparent_1px)] bg-[size:36px_36px]" />
