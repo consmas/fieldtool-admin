@@ -55,6 +55,17 @@ export interface Trip {
   client_name?: string | null;
   destination?: string | null;
   delivery_address?: string | null;
+  delivery_place_id?: string | null;
+  delivery_lat?: number | null;
+  delivery_lng?: number | null;
+  delivery_map_url?: string | null;
+  delivery_location_source?:
+    | "manual"
+    | "google_autocomplete"
+    | "shared_link"
+    | "geolocation"
+    | string
+    | null;
   tonnage_load?: string | null;
   customer_contact_name?: string | null;
   customer_contact_phone?: string | null;
@@ -274,6 +285,57 @@ export interface PreTripInspection {
   inspection_confirmed?: boolean | null;
   inspection_confirmed_by_id?: number | null;
   inspection_confirmed_at?: string | null;
+  core_checklist?: Record<
+    string,
+    | boolean
+    | "pass"
+    | "fail"
+    | "na"
+    | null
+    | {
+        status?: "pass" | "fail" | "na" | string | null;
+        note?: string | null;
+      }
+  > | null;
+  core_checklist_template?: Array<{
+    code: string;
+    label: string;
+    section: string;
+    severity_on_fail?: "blocker" | "warning" | string | null;
+  }> | null;
   created_at?: string | null;
   updated_at?: string | null;
+}
+
+export interface ChatMessage {
+  id: number | string;
+  trip_id?: number | null;
+  body: string;
+  created_at?: string | null;
+  updated_at?: string | null;
+  read_at?: string | null;
+  read?: boolean | null;
+  sender_id?: number | null;
+  user_id?: number | null;
+  sender_role?: string | null;
+  sender_name?: string | null;
+  sender_type?: string | null;
+}
+
+export interface ChatThread {
+  trip_id?: number | null;
+  trip_reference?: string | null;
+  trip_status?: string | null;
+  unread_count?: number;
+  last_message_at?: string | null;
+  messages: ChatMessage[];
+}
+
+export interface ChatInboxThread {
+  trip_id: number;
+  trip_reference?: string | null;
+  trip_status?: string | null;
+  unread_count: number;
+  last_message_at?: string | null;
+  last_message_body?: string | null;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchTrip } from "@/lib/api/trips";
 import TripHeader from "@/components/trips/TripHeader";
@@ -16,7 +17,21 @@ import {
   uploadRoadExpenseReceipt,
   verifyPreTrip,
 } from "@/lib/api/logistics";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+type ChecklistStatus = "pass" | "fail" | "na";
+type ChecklistFilter = "all" | "failed" | "blockers";
+
+function normalizeChecklistStatus(value: unknown): ChecklistStatus | null {
+  if (value === true) return "pass";
+  if (value === false) return "fail";
+  if (typeof value !== "string") return null;
+  const normalized = value.toLowerCase();
+  if (normalized === "pass" || normalized === "ok" || normalized === "yes") return "pass";
+  if (normalized === "fail" || normalized === "failed" || normalized === "no") return "fail";
+  if (normalized === "na" || normalized === "n/a" || normalized === "not_applicable") return "na";
+  return null;
+}
 
 export default function TripDetailPage() {
   const params = useParams();
@@ -38,13 +53,18 @@ export default function TripDetailPage() {
     queryKey: ["trip", tripId, "pre_trip"],
     queryFn: () => fetchPreTrip(tripId),
     enabled: Boolean(tripId),
-    refetchInterval: 30_000,
+    // This endpoint returns 404 until a pre-trip exists; do not poll it in the background.
+    refetchInterval: false,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const [verificationStatus, setVerificationStatus] = useState<
     "approved" | "rejected"
   >("approved");
   const [verificationNote, setVerificationNote] = useState("");
+  const [checklistFilter, setChecklistFilter] = useState<ChecklistFilter>("all");
   const [fuelAllocation, setFuelAllocation] = useState({
     fuel_allocated_litres: "",
     fuel_allocation_station: "",
@@ -111,6 +131,83 @@ export default function TripDetailPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["trip", tripId] }),
   });
 
+  const checklistRows = useMemo(() => {
+    const template = preTrip?.core_checklist_template ?? [];
+    const values = preTrip?.core_checklist ?? {};
+
+    return template.map((item) => {
+      const rawValue = values[item.code];
+      const objectValue =
+        rawValue && typeof rawValue === "object" && !Array.isArray(rawValue)
+          ? (rawValue as { status?: string | null; note?: string | null })
+          : null;
+      const status = normalizeChecklistStatus(objectValue?.status ?? rawValue);
+      const note = objectValue?.note?.trim() || "";
+      const severity = item.severity_on_fail === "blocker" ? "blocker" : "warning";
+
+      return {
+        ...item,
+        status,
+        note,
+        isFailure: status === "fail",
+        isBlockerFailure: status === "fail" && severity === "blocker",
+      };
+    });
+  }, [preTrip?.core_checklist, preTrip?.core_checklist_template]);
+
+  const filteredChecklistRows = useMemo(() => {
+    if (checklistFilter === "failed") {
+      return checklistRows.filter((row) => row.isFailure);
+    }
+    if (checklistFilter === "blockers") {
+      return checklistRows.filter((row) => row.isBlockerFailure);
+    }
+    return checklistRows;
+  }, [checklistRows, checklistFilter]);
+
+  const checklistGrouped = useMemo(() => {
+    const grouped = new Map<string, typeof filteredChecklistRows>();
+    filteredChecklistRows.forEach((row) => {
+      const section = row.section || "General";
+      const existing = grouped.get(section) ?? [];
+      grouped.set(section, [...existing, row]);
+    });
+    return Array.from(grouped.entries());
+  }, [filteredChecklistRows]);
+
+  const checklistSummary = useMemo(() => {
+    const totalFail = checklistRows.filter((row) => row.isFailure).length;
+    const blockerFailCount = checklistRows.filter((row) => row.isBlockerFailure).length;
+    return { totalFail, blockerFailCount };
+  }, [checklistRows]);
+
+  const exportChecklistCsv = () => {
+    if (checklistRows.length === 0) return;
+    const header = ["section", "code", "label", "status", "severity_on_fail", "note"];
+    const lines = checklistRows.map((row) =>
+      [
+        row.section ?? "",
+        row.code ?? "",
+        row.label ?? "",
+        row.status ?? "",
+        row.severity_on_fail ?? "",
+        row.note ?? "",
+      ]
+        .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+        .join(",")
+    );
+    const csv = [header.join(","), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `trip-${tripId}-inspection-checklist.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  };
+
   if (isLoading) {
     return (
       <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
@@ -130,6 +227,14 @@ export default function TripDetailPage() {
   return (
     <div className="space-y-6">
       <TripHeader trip={trip} />
+      <div>
+        <Link
+          href={`/trip-chats/${trip.id}`}
+          className="inline-flex rounded-xl border border-border px-3 py-2 text-xs"
+        >
+          Chat with Dispatcher
+        </Link>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-6">
@@ -177,6 +282,41 @@ export default function TripDetailPage() {
               <div>
                 <p className="text-xs text-muted-foreground">Delivery Address</p>
                 <p className="font-semibold">{trip.delivery_address ?? "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Delivery Coordinates</p>
+                <p className="font-semibold">
+                  {trip.delivery_lat !== null &&
+                  trip.delivery_lat !== undefined &&
+                  trip.delivery_lng !== null &&
+                  trip.delivery_lng !== undefined
+                    ? `${Number(trip.delivery_lat).toFixed(6)}, ${Number(
+                        trip.delivery_lng
+                      ).toFixed(6)}`
+                    : "-"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Map</p>
+                {trip.delivery_map_url ||
+                (trip.delivery_lat !== null &&
+                  trip.delivery_lat !== undefined &&
+                  trip.delivery_lng !== null &&
+                  trip.delivery_lng !== undefined) ? (
+                  <a
+                    href={
+                      trip.delivery_map_url ||
+                      `https://www.google.com/maps?q=${trip.delivery_lat},${trip.delivery_lng}`
+                    }
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex rounded-lg border border-border px-2 py-1 text-xs"
+                  >
+                    Open in Maps
+                  </a>
+                ) : (
+                  <p className="font-semibold">-</p>
+                )}
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Tonnage Load</p>
@@ -498,6 +638,129 @@ export default function TripDetailPage() {
                     )}
                   </div>
                 ))}
+              </div>
+
+              <div className="rounded-xl border border-border bg-muted/20 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Inspection Checklist
+                  </h4>
+                  {checklistRows.length > 0 ? (
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        className="rounded-lg border border-border px-2 py-1 text-[11px]"
+                        onClick={() => window.print()}
+                      >
+                        Print
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-lg border border-border px-2 py-1 text-[11px]"
+                        onClick={exportChecklistCsv}
+                      >
+                        Export CSV
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+
+                {checklistRows.length === 0 ? (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Legacy pre-trip (no structured checklist submitted).
+                  </p>
+                ) : (
+                  <div className="mt-3 space-y-3">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="rounded-lg border border-rose-300 bg-rose-500/10 px-3 py-2 text-xs">
+                        <p className="text-muted-foreground">Total Failed Checks</p>
+                        <p className="text-sm font-semibold text-rose-400">
+                          {checklistSummary.totalFail}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-rose-400 bg-rose-600/20 px-3 py-2 text-xs">
+                        <p className="text-muted-foreground">Blocker Failures</p>
+                        <p className="text-sm font-semibold text-rose-300">
+                          {checklistSummary.blockerFailCount}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { key: "all", label: "All" },
+                        { key: "failed", label: "Failed Only" },
+                        { key: "blockers", label: "Blockers Only" },
+                      ].map((filter) => (
+                        <button
+                          key={filter.key}
+                          type="button"
+                          onClick={() => setChecklistFilter(filter.key as ChecklistFilter)}
+                          className={`rounded-lg border px-3 py-1 text-xs ${
+                            checklistFilter === filter.key
+                              ? "border-primary bg-primary/20 text-primary"
+                              : "border-border text-muted-foreground"
+                          }`}
+                        >
+                          {filter.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {checklistGrouped.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        No checklist items for selected filter.
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {checklistGrouped.map(([section, rows]) => (
+                          <div key={section} className="rounded-lg border border-border p-3">
+                            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                              {section}
+                            </p>
+                            <div className="mt-2 space-y-2">
+                              {rows.map((row) => {
+                                const badgeClass =
+                                  row.status === "fail" && row.severity_on_fail === "blocker"
+                                    ? "border-rose-400 bg-rose-500/20 text-rose-300"
+                                    : row.status === "fail"
+                                    ? "border-amber-400 bg-amber-500/20 text-amber-300"
+                                    : row.status === "pass"
+                                    ? "border-emerald-400 bg-emerald-500/20 text-emerald-300"
+                                    : "border-border bg-muted/30 text-muted-foreground";
+
+                                return (
+                                  <div
+                                    key={row.code}
+                                    className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-border bg-background/30 px-3 py-2"
+                                  >
+                                    <div>
+                                      <p className="text-sm font-medium">{row.label}</p>
+                                      <p className="text-[11px] text-muted-foreground">
+                                        {row.code}
+                                        {row.severity_on_fail
+                                          ? ` • ${row.severity_on_fail}`
+                                          : ""}
+                                      </p>
+                                      {row.note ? (
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                          Note: {row.note}
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                    <span className={`rounded-full border px-2 py-1 text-[11px] font-semibold ${badgeClass}`}>
+                                      {(row.status ?? "na").toUpperCase()}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           ) : (

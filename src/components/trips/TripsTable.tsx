@@ -43,7 +43,20 @@ export default function TripsTable({
                 {trip.client_name ?? "-"}
               </td>
               <td className="px-5 py-4 text-muted-foreground">
-                {trip.destination ?? trip.dropoff_location ?? "-"}
+                <div>
+                  <p>{trip.destination ?? trip.dropoff_location ?? "-"}</p>
+                  {trip.delivery_address ? (
+                    <p className="text-xs">{trip.delivery_address}</p>
+                  ) : null}
+                  {trip.delivery_lat !== null &&
+                  trip.delivery_lat !== undefined &&
+                  trip.delivery_lng !== null &&
+                  trip.delivery_lng !== undefined ? (
+                    <p className="mt-1 inline-block rounded-full border border-border px-2 py-0.5 text-[10px]">
+                      {Number(trip.delivery_lat).toFixed(5)}, {Number(trip.delivery_lng).toFixed(5)}
+                    </p>
+                  ) : null}
+                </div>
               </td>
               <td className="px-5 py-4">
                 <TripStatusBadge status={trip.status} />
@@ -71,6 +84,29 @@ export default function TripsTable({
                   >
                     Edit
                   </Link>
+                  <Link
+                    href={`/trip-chats/${trip.id}`}
+                    className="rounded-lg border border-border px-3 py-1 text-xs"
+                  >
+                    Chat
+                  </Link>
+                  {trip.delivery_map_url ||
+                  (trip.delivery_lat !== null &&
+                    trip.delivery_lat !== undefined &&
+                    trip.delivery_lng !== null &&
+                    trip.delivery_lng !== undefined) ? (
+                    <a
+                      href={
+                        trip.delivery_map_url ||
+                        `https://www.google.com/maps?q=${trip.delivery_lat},${trip.delivery_lng}`
+                      }
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-lg border border-border px-3 py-1 text-xs"
+                    >
+                      Map
+                    </a>
+                  ) : null}
                   <button
                     type="button"
                     className="rounded-lg border border-border px-3 py-1 text-xs text-rose-500"

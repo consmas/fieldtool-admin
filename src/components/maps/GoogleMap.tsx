@@ -10,6 +10,12 @@ interface GoogleMapProps {
 
 let optionsInitialized = false;
 
+declare global {
+  interface Window {
+    __gmapsOptionsSet?: boolean;
+  }
+}
+
 function toNumber(value?: number | string) {
   if (value === undefined || value === null) return undefined;
   const n = typeof value === "string" ? Number(value) : value;
@@ -34,29 +40,48 @@ export default function GoogleMap({ lat, lng }: GoogleMapProps) {
       return;
     }
 
-    if (!optionsInitialized) {
-      setOptions({ apiKey, version: "weekly" } as unknown as object);
+    if (!optionsInitialized && !window.__gmapsOptionsSet) {
+      setOptions({ key: apiKey, v: "weekly" });
       optionsInitialized = true;
+      window.__gmapsOptionsSet = true;
     }
 
-    let marker: google.maps.Marker | null = null;
+    let marker: google.maps.marker.AdvancedMarkerElement | null = null;
+    let circle: google.maps.Circle | null = null;
 
-    importLibrary("maps").then(({ Map }) => {
+    importLibrary("maps").then(async ({ Map }) => {
       const map = new Map(mapRef.current as HTMLElement, {
         center: coords,
         zoom: 13,
         mapId: mapId || undefined,
       });
 
-      marker = new google.maps.Marker({
-        position: coords,
-        map,
-      });
+      // Advanced markers require a valid mapId. Fall back to a circle pin.
+      if (mapId) {
+        const markerLibrary = await importLibrary("marker");
+        marker = new markerLibrary.AdvancedMarkerElement({
+          position: coords,
+          map,
+        });
+      } else {
+        circle = new google.maps.Circle({
+          map,
+          center: coords,
+          radius: 25,
+          strokeWeight: 2,
+          strokeColor: "#0ea5e9",
+          fillColor: "#38bdf8",
+          fillOpacity: 0.7,
+        });
+      }
     });
 
     return () => {
       if (marker) {
-        marker.setMap(null);
+        marker.map = null;
+      }
+      if (circle) {
+        circle.setMap(null);
       }
     };
   }, [apiKey, coords, mapId]);

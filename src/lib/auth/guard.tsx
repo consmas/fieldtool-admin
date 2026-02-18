@@ -10,6 +10,8 @@ const dispatcherAllowed = [
   /^\/trips\/\d+$/,
   /^\/trips\/\d+\/edit$/,
   /^\/reports$/,
+  /^\/trip-chats$/,
+  /^\/trip-chats\/\d+$/,
   /^\/destinations$/,
   /^\/destinations\/\d+$/,
   /^\/fuel-prices$/,

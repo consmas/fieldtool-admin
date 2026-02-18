@@ -73,6 +73,10 @@ export default function LogisticsPage() {
     queryKey: ["trip", selectedTripId, "pre_trip"],
     queryFn: () => (selectedTripId ? fetchPreTrip(String(selectedTripId)) : Promise.resolve(null)),
     enabled: Boolean(selectedTripId),
+    retry: false,
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const verifyMutation = useMutation({

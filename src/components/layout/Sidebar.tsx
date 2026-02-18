@@ -14,13 +14,17 @@ import {
   ClipboardCheck,
   MapPin,
   Fuel,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useState } from "react";
 import { useAuthStore } from "@/stores/auth.store";
+import { useQuery } from "@tanstack/react-query";
+import { fetchChatInbox } from "@/lib/api/chat";
 
 const navItems = [
   { href: "/logistics", label: "Logistics Manager", icon: ClipboardCheck },
+  { href: "/trip-chats", label: "Trip Chats", icon: MessageSquare },
   { href: "/destinations", label: "Destinations", icon: MapPin },
   { href: "/fuel-prices", label: "Fuel Prices", icon: Fuel },
   { href: "/tracking", label: "Tracking", icon: Map },
@@ -43,6 +47,15 @@ export default function Sidebar() {
     pathname.startsWith("/trips/") ||
     pathname === "/trips/new";
   const [isTripsOpen, setIsTripsOpen] = useState(isTripsActive);
+  const { data: inbox = [] } = useQuery({
+    queryKey: ["chat", "inbox"],
+    queryFn: fetchChatInbox,
+    refetchInterval: 15_000,
+  });
+  const unreadCount = inbox.reduce(
+    (sum, row) => sum + (Number(row.unread_count) || 0),
+    0
+  );
 
   return (
     <aside className="fixed left-0 top-0 flex h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
@@ -131,7 +144,13 @@ export default function Sidebar() {
         {navItems
           .filter((item) => {
             if (role === "dispatcher") {
-              return ["/reports", "/logistics", "/destinations", "/fuel-prices"].includes(item.href);
+              return [
+                "/reports",
+                "/logistics",
+                "/trip-chats",
+                "/destinations",
+                "/fuel-prices",
+              ].includes(item.href);
             }
             return true;
           })
@@ -152,6 +171,11 @@ export default function Sidebar() {
               >
                 <Icon className="h-4 w-4" />
                 {item.label}
+                {item.href === "/trip-chats" && unreadCount > 0 ? (
+                  <span className="ml-auto rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-semibold text-rose-300">
+                    {unreadCount}
+                  </span>
+                ) : null}
               </Link>
             );
           })}
