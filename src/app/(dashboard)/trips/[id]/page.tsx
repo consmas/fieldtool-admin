@@ -320,7 +320,7 @@ export default function TripDetailPage() {
 
               {trip.latest_location ? (
                 <Section title="Live Location" subtitle="Latest coordinates from tracking">
-                  <GoogleMap coords={{ lat: trip.latest_location.lat, lng: trip.latest_location.lng }} />
+                  <GoogleMap lat={trip.latest_location.lat} lng={trip.latest_location.lng} />
                 </Section>
               ) : null}
             </>
