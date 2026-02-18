@@ -64,6 +64,22 @@ function mapTotalsFromAny(value: unknown) {
   }));
 }
 
+function mapDateTotalsFromAny(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.map((item) => {
+      const row = toRecord(item);
+      return {
+        date: String(row.date ?? row.day ?? row.label ?? "-"),
+        value: toNumber(row.value ?? row.total ?? row.amount ?? row.count),
+      };
+    });
+  }
+  return Object.entries(toRecord(value)).map(([date, raw]) => ({
+    date,
+    value: toNumber(raw),
+  }));
+}
+
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-GH", {
     style: "currency",
@@ -94,6 +110,47 @@ function downloadCsv(filename: string, rows: Array<Array<unknown>>) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function getOverviewMetrics(activeData: Record<string, unknown>) {
+  const trips = toRecord(activeData.trips);
+  const expenses = toRecord(activeData.expenses);
+  const efficiency = toRecord(activeData.efficiency);
+
+  const totalTrips = toNumber(
+    activeData.total_trips ??
+      activeData.trips_total ??
+      activeData.trip_total ??
+      trips.total
+  );
+  const completedTrips = toNumber(
+    activeData.completed_trips ??
+      activeData.trips_completed ??
+      trips.completed
+  );
+  const completionRate = toNumber(
+    activeData.completion_rate ??
+      activeData.completion_rate_pct ??
+      trips.completion_rate_pct ??
+      (totalTrips > 0 ? (completedTrips / totalTrips) * 100 : 0)
+  );
+  const totalDistance = toNumber(
+    activeData.total_distance ??
+      activeData.total_distance_km ??
+      trips.total_distance_km
+  );
+  const totalExpense = toNumber(
+    activeData.total_expense ??
+      activeData.expense_total ??
+      expenses.total
+  );
+  const costPerKm = toNumber(
+    activeData.cost_per_km ??
+      efficiency.cost_per_km ??
+      (totalDistance > 0 ? totalExpense / totalDistance : 0)
+  );
+
+  return { totalTrips, completedTrips, completionRate, totalDistance, totalExpense, costPerKm };
 }
 
 function LoadingState() {
@@ -220,6 +277,21 @@ export default function ReportsPage() {
   const { data: trips = [] } = useQuery({ queryKey: ["trips", "report-filters"], queryFn: fetchTrips });
   const { data: users = [] } = useQuery({ queryKey: ["users", "report-filters"], queryFn: fetchUsers });
   const { data: vehicles = [] } = useQuery({ queryKey: ["vehicles", "report-filters"], queryFn: fetchVehicles });
+  const tripNameById = useMemo(
+    () =>
+      Object.fromEntries(
+        trips.map((trip) => [trip.id, String(trip.waybill_number ?? trip.reference_code ?? `Trip ${trip.id}`)])
+      ),
+    [trips]
+  );
+  const userNameById = useMemo(
+    () => Object.fromEntries(users.map((u) => [u.id, String(u.name ?? u.email ?? `User ${u.id}`)])),
+    [users]
+  );
+  const vehicleNameById = useMemo(
+    () => Object.fromEntries(vehicles.map((v) => [v.id, String(v.name ?? `Vehicle ${v.id}`)])),
+    [vehicles]
+  );
 
   const overviewQuery = useQuery({
     queryKey: ["reports", "overview", filters],
@@ -264,15 +336,7 @@ export default function ReportsPage() {
     const filename = `reports-${tab}.csv`;
 
     if (tab === "overview") {
-      const totalTrips = toNumber(activeData.total_trips ?? activeData.trips_total ?? activeData.trip_total);
-      const completedTrips = toNumber(activeData.completed_trips ?? activeData.trips_completed);
-      const completionRate = toNumber(
-        activeData.completion_rate ??
-          (totalTrips > 0 ? (completedTrips / totalTrips) * 100 : 0)
-      );
-      const totalDistance = toNumber(activeData.total_distance ?? activeData.total_distance_km);
-      const totalExpense = toNumber(activeData.total_expense ?? activeData.expense_total);
-      const costPerKm = toNumber(activeData.cost_per_km ?? (totalDistance > 0 ? totalExpense / totalDistance : 0));
+      const { totalTrips, completionRate, totalDistance, totalExpense, costPerKm } = getOverviewMetrics(activeData);
       downloadCsv(filename, [
         ["Metric", "Value"],
         ["Trips Total", totalTrips],
@@ -348,12 +412,8 @@ export default function ReportsPage() {
   };
 
   const renderOverview = () => {
-    const totalTrips = toNumber(activeData.total_trips ?? activeData.trips_total ?? activeData.trip_total);
-    const completedTrips = toNumber(activeData.completed_trips ?? activeData.trips_completed);
-    const completionRate = toNumber(activeData.completion_rate ?? (totalTrips > 0 ? (completedTrips / totalTrips) * 100 : 0));
-    const totalDistance = toNumber(activeData.total_distance ?? activeData.total_distance_km);
-    const totalExpense = toNumber(activeData.total_expense ?? activeData.expense_total);
-    const costPerKm = toNumber(activeData.cost_per_km ?? (totalDistance > 0 ? totalExpense / totalDistance : 0));
+    const { totalTrips, completedTrips, totalDistance, totalExpense, costPerKm, completionRate } =
+      getOverviewMetrics(activeData);
 
     if ([totalTrips, completedTrips, totalDistance, totalExpense, costPerKm].every((v) => v === 0)) return <EmptyState />;
 
@@ -369,7 +429,19 @@ export default function ReportsPage() {
   };
 
   const renderTrips = () => {
-    const statusItems = mapTotalsFromAny(activeData.status_breakdown ?? activeData.statuses);
+    const totals = toRecord(activeData.totals);
+    const timeline = toRecord(activeData.timeline);
+    const dimensions = toRecord(activeData.dimensions);
+    const quality = toRecord(activeData.quality);
+
+    const statusItems = mapTotalsFromAny(
+      activeData.status_breakdown ??
+        activeData.statuses ??
+        totals.status_breakdown ??
+        totals.by_status ??
+        activeData.trips
+    ).filter((item) => item.label !== "total_distance_km" && item.label !== "completion_rate_pct");
+
     const trendRows = getArrayFromAny(activeData, ["created_completed_trend", "trend", "daily_trend"]).map((item) => {
       const row = toRecord(item);
       return [
@@ -378,38 +450,89 @@ export default function ReportsPage() {
         formatNumber(toNumber(row.completed ?? row.completed_count)),
       ];
     });
-    const incidentsRows = getArrayFromAny(activeData, ["incidents", "incident_breakdown"]).map((item) => {
-      const row = toRecord(item);
-      return [
-        String(row.type ?? row.category ?? row.label ?? "-"),
-        formatNumber(toNumber(row.count ?? row.total ?? row.value)),
-      ];
-    });
-    const destinationsRows = getArrayFromAny(activeData, ["top_destinations", "destinations"]).map((item) => {
-      const row = toRecord(item);
-      return [
-        String(row.name ?? row.destination ?? row.label ?? "-"),
-        formatNumber(toNumber(row.count ?? row.trips ?? row.value)),
-      ];
-    });
+    if (trendRows.length === 0) {
+      const createdMap = toRecord(
+        timeline.created_daily ?? timeline.created_total ?? timeline.created ?? activeData.created_total
+      );
+      const completedMap = toRecord(
+        timeline.completed_daily ?? timeline.completed_total ?? timeline.completed ?? activeData.completed_total
+      );
+      const dates = Array.from(new Set([...Object.keys(createdMap), ...Object.keys(completedMap)])).sort();
+      dates.forEach((date) => {
+        trendRows.push([
+          date,
+          formatNumber(toNumber(createdMap[date])),
+          formatNumber(toNumber(completedMap[date])),
+        ]);
+      });
+    }
+
+    const incidentsRows = [
+      ...getArrayFromAny(activeData, ["incidents", "incident_breakdown"]).map((item) => {
+        const row = toRecord(item);
+        return [
+          String(row.type ?? row.category ?? row.label ?? "-"),
+          formatNumber(toNumber(row.count ?? row.total ?? row.value)),
+        ];
+      }),
+      ...Object.entries(
+        toRecord(dimensions.by_incident ?? dimensions.by_incidents ?? activeData.incidents)
+      ).map(([type, count]) => [type, formatNumber(toNumber(count))]),
+    ];
+
+    const destinationsRows = [
+      ...getArrayFromAny(activeData, ["top_destinations", "destinations"]).map((item) => {
+        const row = toRecord(item);
+        return [
+          String(row.name ?? row.destination ?? row.label ?? "-"),
+          formatNumber(toNumber(row.count ?? row.trips ?? row.value)),
+        ];
+      }),
+      ...Object.entries(
+        toRecord(dimensions.by_destination ?? dimensions.by_destinations ?? activeData.destinations)
+      ).map(([destination, tripsCount]) => [destination, formatNumber(toNumber(tripsCount))]),
+      ...Object.entries(toRecord(activeData.destination_breakdown)).map(([destination, tripsCount]) => [
+        destination || "(Blank)",
+        formatNumber(toNumber(tripsCount)),
+      ]),
+    ];
+
+    const tripsTotal = toNumber(activeData.total ?? totals.total);
+    const incidentsTotal = toNumber(activeData.with_incidents ?? quality.with_incidents);
+    const incidentRate = toNumber(activeData.incident_rate_pct ?? quality.incident_rate_pct);
 
     if (statusItems.length === 0 && trendRows.length === 0 && incidentsRows.length === 0 && destinationsRows.length === 0) {
       return <EmptyState />;
     }
 
     return (
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="space-y-4">
+        <section className="grid gap-3 sm:grid-cols-3">
+          <MetricCard label="Trips Total" value={formatNumber(tripsTotal)} />
+          <MetricCard label="Trips With Incidents" value={formatNumber(incidentsTotal)} />
+          <MetricCard label="Incident Rate" value={formatPercent(incidentRate)} />
+        </section>
+        <div className="grid gap-4 xl:grid-cols-2">
         <TotalBars title="Status Breakdown" items={statusItems} />
         <SimpleTable title="Created vs Completed Trend" columns={["Date", "Created", "Completed"]} rows={trendRows} />
         <SimpleTable title="Incidents" columns={["Type", "Count"]} rows={incidentsRows} />
         <SimpleTable title="Top Destinations" columns={["Destination", "Trips"]} rows={destinationsRows} />
+        </div>
       </div>
     );
   };
 
   const renderExpenses = () => {
-    const categoryItems = mapTotalsFromAny(activeData.by_category ?? activeData.category_totals ?? activeData.categories);
-    const statusItems = mapTotalsFromAny(activeData.by_status ?? activeData.status_totals ?? activeData.statuses);
+    const totals = toRecord(activeData.totals);
+    const timeline = toRecord(activeData.timeline);
+    const dimensions = toRecord(activeData.dimensions);
+
+    const categoryItems = mapTotalsFromAny(
+      activeData.by_category ?? activeData.category_totals ?? activeData.categories ?? totals.by_category
+    );
+    const statusItems = mapTotalsFromAny(
+      activeData.by_status ?? activeData.status_totals ?? activeData.statuses ?? totals.by_status
+    );
     const dailyRows = getArrayFromAny(activeData, ["daily_trend", "trend"]).map((item) => {
       const row = toRecord(item);
       return [
@@ -417,27 +540,51 @@ export default function ReportsPage() {
         formatCurrency(toNumber(row.total ?? row.amount ?? row.value)),
       ];
     });
-    const byVehicleRows = getArrayFromAny(activeData, ["by_vehicle", "vehicles"]).map((item) => {
-      const row = toRecord(item);
-      return [
-        String(row.vehicle_name ?? row.name ?? row.vehicle ?? row.vehicle_id ?? "-"),
-        formatCurrency(toNumber(row.total ?? row.amount ?? row.value)),
-      ];
-    });
-    const byDriverRows = getArrayFromAny(activeData, ["by_driver", "drivers"]).map((item) => {
-      const row = toRecord(item);
-      return [
-        String(row.driver_name ?? row.name ?? row.driver ?? row.driver_id ?? "-"),
-        formatCurrency(toNumber(row.total ?? row.amount ?? row.value)),
-      ];
-    });
-    const byTripRows = getArrayFromAny(activeData, ["by_trip", "trips"]).map((item) => {
-      const row = toRecord(item);
-      return [
-        String(row.trip_reference ?? row.trip ?? row.trip_id ?? "-"),
-        formatCurrency(toNumber(row.total ?? row.amount ?? row.value)),
-      ];
-    });
+    if (dailyRows.length === 0) {
+      mapDateTotalsFromAny(timeline.daily_total).forEach((row) => {
+        dailyRows.push([row.date, formatCurrency(row.value)]);
+      });
+    }
+
+    const byVehicleRows = [
+      ...getArrayFromAny(activeData, ["by_vehicle", "vehicles"]).map((item) => {
+        const row = toRecord(item);
+        return [
+          String(row.vehicle_name ?? row.name ?? row.vehicle ?? row.vehicle_id ?? "-"),
+          formatCurrency(toNumber(row.total ?? row.amount ?? row.value)),
+        ];
+      }),
+      ...Object.entries(toRecord(dimensions.by_vehicle)).map(([id, value]) => [
+        vehicleNameById[Number(id)] ?? `Vehicle ${id}`,
+        formatCurrency(toNumber(value)),
+      ]),
+    ];
+    const byDriverRows = [
+      ...getArrayFromAny(activeData, ["by_driver", "drivers"]).map((item) => {
+        const row = toRecord(item);
+        return [
+          String(row.driver_name ?? row.name ?? row.driver ?? row.driver_id ?? "-"),
+          formatCurrency(toNumber(row.total ?? row.amount ?? row.value)),
+        ];
+      }),
+      ...Object.entries(toRecord(dimensions.by_driver)).map(([id, value]) => [
+        userNameById[Number(id)] ?? `Driver ${id}`,
+        formatCurrency(toNumber(value)),
+      ]),
+    ];
+    const byTripRows = [
+      ...getArrayFromAny(activeData, ["by_trip", "trips"]).map((item) => {
+        const row = toRecord(item);
+        return [
+          String(row.trip_reference ?? row.trip ?? row.trip_id ?? "-"),
+          formatCurrency(toNumber(row.total ?? row.amount ?? row.value)),
+        ];
+      }),
+      ...Object.entries(toRecord(dimensions.by_trip)).map(([id, value]) => [
+        tripNameById[Number(id)] ?? `Trip ${id}`,
+        formatCurrency(toNumber(value)),
+      ]),
+    ];
 
     if (categoryItems.length === 0 && statusItems.length === 0 && dailyRows.length === 0 && byVehicleRows.length === 0 && byDriverRows.length === 0 && byTripRows.length === 0) {
       return <EmptyState />;
@@ -460,48 +607,118 @@ export default function ReportsPage() {
   };
 
   const renderDrivers = () => {
-    const rows = getArrayFromAny(activeData, ["drivers", "items", "data"]).map((item) => {
+    const dimensions = toRecord(activeData.dimensions);
+    const driverRowsFromArray = getArrayFromAny(activeData, ["drivers", "items", "data"]).map((item) => {
       const row = toRecord(item);
+      const tripsTotal = toNumber(row.trips_total ?? row.total_trips);
+      const completed = toNumber(row.trips_completed ?? row.completed_trips);
+      const completionRate = toNumber(
+        row.completion_rate_pct ?? row.completion_rate ?? row.completion_pct ?? (tripsTotal > 0 ? (completed / tripsTotal) * 100 : 0)
+      );
       return [
         String(row.driver_name ?? row.name ?? row.driver ?? row.driver_id ?? "-"),
-        formatNumber(toNumber(row.trips_total ?? row.total_trips)),
-        formatNumber(toNumber(row.trips_completed ?? row.completed_trips)),
-        formatPercent(toNumber(row.completion_rate ?? row.completion_pct)),
-        formatNumber(toNumber(row.incidents ?? row.incident_count)),
-        formatCurrency(toNumber(row.expenses ?? row.total_expense)),
+        formatNumber(tripsTotal),
+        formatNumber(completed),
+        formatPercent(completionRate),
+        `${formatNumber(toNumber(row.distance_km_total ?? row.distance ?? row.total_distance_km))} km`,
+        formatNumber(toNumber(row.incidents_count ?? row.incidents ?? row.incident_count)),
+        formatCurrency(toNumber(row.expenses_total ?? row.expenses ?? row.total_expense)),
+        formatCurrency(toNumber(row.unpaid_expenses_total ?? row.unpaid_expenses ?? row.pending_expenses_total)),
       ];
     });
+    const driverTripsMap = toRecord(dimensions.by_driver_trips_total ?? activeData.by_driver_trips_total);
+    const driverCompletedMap = toRecord(dimensions.by_driver_completed ?? activeData.by_driver_completed);
+    const driverIncidentsMap = toRecord(dimensions.by_driver_incidents ?? activeData.by_driver_incidents);
+    const driverExpensesMap = toRecord(dimensions.by_driver ?? dimensions.by_driver_expense ?? activeData.by_driver);
+    const driverIds = Array.from(
+      new Set([
+        ...Object.keys(driverTripsMap),
+        ...Object.keys(driverCompletedMap),
+        ...Object.keys(driverIncidentsMap),
+        ...Object.keys(driverExpensesMap),
+      ])
+    );
+    const rows = driverRowsFromArray.length
+      ? driverRowsFromArray
+      : driverIds.map((id) => {
+          const tripsTotal = toNumber(driverTripsMap[id]);
+          const completed = toNumber(driverCompletedMap[id]);
+          const incidents = toNumber(driverIncidentsMap[id]);
+          const expenses = toNumber(driverExpensesMap[id]);
+          const completion = tripsTotal > 0 ? (completed / tripsTotal) * 100 : 0;
+          return [
+            userNameById[Number(id)] ?? `Driver ${id}`,
+            formatNumber(tripsTotal),
+            formatNumber(completed),
+            formatPercent(completion),
+            `${formatNumber(0)} km`,
+            formatNumber(incidents),
+            formatCurrency(expenses),
+            formatCurrency(0),
+          ];
+        });
 
     if (rows.length === 0) return <EmptyState />;
 
     return (
       <SimpleTable
         title="Driver Performance"
-        columns={["Driver", "Trips Total", "Completed", "Completion %", "Incidents", "Expenses"]}
+        columns={["Driver", "Trips Total", "Completed", "Completion %", "Distance", "Incidents", "Expenses", "Unpaid"]}
         rows={rows}
       />
     );
   };
 
   const renderVehicles = () => {
-    const rows = getArrayFromAny(activeData, ["vehicles", "items", "data"]).map((item) => {
+    const dimensions = toRecord(activeData.dimensions);
+    const vehicleRowsFromArray = getArrayFromAny(activeData, ["vehicles", "items", "data"]).map((item) => {
       const row = toRecord(item);
       return [
         String(row.vehicle_name ?? row.name ?? row.vehicle ?? row.vehicle_id ?? "-"),
-        formatNumber(toNumber(row.trips ?? row.total_trips)),
-        `${formatNumber(toNumber(row.distance ?? row.total_distance_km))} km`,
-        `${formatNumber(toNumber(row.fuel_liters ?? row.fuel_used_liters))} L`,
+        String(row.license_plate ?? row.plate ?? "-"),
+        formatNumber(toNumber(row.trips ?? row.total_trips ?? row.trips_total)),
+        formatNumber(toNumber(row.trips_completed ?? row.completed_trips)),
+        `${formatNumber(toNumber(row.distance_km_total ?? row.distance ?? row.total_distance_km))} km`,
+        `${formatNumber(toNumber(row.fuel_litres_total ?? row.fuel_liters ?? row.fuel_used_liters))} L`,
+        formatCurrency(toNumber(row.expenses_total ?? row.total_expense)),
         formatCurrency(toNumber(row.maintenance_total ?? row.maintenance)),
         formatCurrency(toNumber(row.repair_total ?? row.repair)),
       ];
     });
+    const vehicleTripsMap = toRecord(dimensions.by_vehicle_trips ?? activeData.by_vehicle_trips);
+    const vehicleDistanceMap = toRecord(dimensions.by_vehicle_distance ?? activeData.by_vehicle_distance);
+    const vehicleFuelMap = toRecord(dimensions.by_vehicle_fuel_liters ?? activeData.by_vehicle_fuel_liters);
+    const vehicleMaintenanceMap = toRecord(dimensions.by_vehicle_maintenance ?? activeData.by_vehicle_maintenance);
+    const vehicleRepairMap = toRecord(dimensions.by_vehicle_repair ?? activeData.by_vehicle_repair);
+    const vehicleIds = Array.from(
+      new Set([
+        ...Object.keys(vehicleTripsMap),
+        ...Object.keys(vehicleDistanceMap),
+        ...Object.keys(vehicleFuelMap),
+        ...Object.keys(vehicleMaintenanceMap),
+        ...Object.keys(vehicleRepairMap),
+      ])
+    );
+    const rows = vehicleRowsFromArray.length
+      ? vehicleRowsFromArray
+      : vehicleIds.map((id) => [
+          vehicleNameById[Number(id)] ?? `Vehicle ${id}`,
+          "-",
+          formatNumber(toNumber(vehicleTripsMap[id])),
+          formatNumber(0),
+          `${formatNumber(toNumber(vehicleDistanceMap[id]))} km`,
+          `${formatNumber(toNumber(vehicleFuelMap[id]))} L`,
+          formatCurrency(0),
+          formatCurrency(toNumber(vehicleMaintenanceMap[id])),
+          formatCurrency(toNumber(vehicleRepairMap[id])),
+        ]);
 
     if (rows.length === 0) return <EmptyState />;
 
     return (
       <SimpleTable
         title="Vehicle Performance"
-        columns={["Vehicle", "Trips", "Distance", "Fuel", "Maintenance", "Repair"]}
+        columns={["Vehicle", "Plate", "Trips", "Completed", "Distance", "Fuel", "Expenses", "Maintenance", "Repair"]}
         rows={rows}
       />
     );

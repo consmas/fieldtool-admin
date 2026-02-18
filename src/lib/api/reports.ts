@@ -21,7 +21,12 @@ function cleanFilters(filters: ReportFilters) {
 
 function unwrap<T>(data: unknown): T {
   if (data && typeof data === "object" && "data" in (data as Record<string, unknown>)) {
-    return ((data as Record<string, unknown>).data as T) ?? ({} as T);
+    const payload = data as Record<string, unknown>;
+    const keys = Object.keys(payload);
+    // Only unwrap when payload is a pure transport wrapper like { data: ... }.
+    if (keys.length === 1) {
+      return (payload.data as T) ?? ({} as T);
+    }
   }
   return (data as T) ?? ({} as T);
 }

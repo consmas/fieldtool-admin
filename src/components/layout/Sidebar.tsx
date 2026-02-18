@@ -44,7 +44,7 @@ const navItems: NavItem[] = [
   { href: "/destinations", label: "Destinations", icon: MapPin, section: "Operations" },
   { href: "/vehicles", label: "Vehicles", icon: Waypoints, section: "Operations" },
   { href: "/fuel-prices", label: "Fuel Prices", icon: Fuel, section: "Finance" },
-  { href: "/expensis", label: "Expensis", icon: ReceiptText, section: "Finance" },
+  { href: "/expenses", label: "Expenses", icon: ReceiptText, section: "Finance" },
   { href: "/reports", label: "Reports", icon: FileText, section: "Finance" },
   { href: "/users", label: "Users", icon: Users, section: "Finance" },
 ];
@@ -55,7 +55,7 @@ const dispatcherAllowed = new Set([
   "/trip-chats",
   "/destinations",
   "/fuel-prices",
-  "/expensis",
+  "/expenses",
   "/trips",
 ]);
 
