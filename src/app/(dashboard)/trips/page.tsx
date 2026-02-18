@@ -182,13 +182,13 @@ export default function TripsPage() {
                 className="w-full rounded-lg border border-border bg-card py-2 pl-9 pr-3 text-sm outline-none transition focus:border-primary"
               />
             </div>
-            <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="hidden items-center gap-2 text-xs text-muted-foreground md:inline-flex">
               <Filter className="h-3.5 w-3.5" />
               Live queue
             </div>
           </div>
 
-          <div className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
+          <div className="flex flex-wrap gap-2">
             {filterPills.map((pill) => {
               const isActive = filter === pill.key;
               return (
@@ -200,7 +200,7 @@ export default function TripsPage() {
                     setPage(1);
                   }}
                   className={[
-                    "inline-flex shrink-0 snap-start items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-semibold transition",
+                    "inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-semibold transition",
                     isActive
                       ? "border-primary/40 bg-primary/15 text-primary"
                       : "border-border bg-card text-muted-foreground hover:text-foreground",
@@ -257,7 +257,7 @@ export default function TripsPage() {
       ) : (
         <>
           <div className="ops-card overflow-hidden">
-            <div className="md:hidden space-y-2 p-3">
+            <div className="space-y-2 p-3 lg:hidden">
               {pageTrips.length === 0 ? (
                 <div className="rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground">
                   No trips match this filter.
@@ -266,11 +266,11 @@ export default function TripsPage() {
                 pageTrips.map((trip) => (
                   <div key={trip.id} className="rounded-lg border border-border bg-card p-3">
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <Link href={`/trips/${trip.id}`} className="font-semibold text-foreground hover:text-primary">
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/trips/${trip.id}`} className="block truncate font-semibold text-foreground hover:text-primary">
                           {getTripRef(trip)}
                         </Link>
-                        <p className="mt-1 text-xs text-muted-foreground">{getRouteText(trip)}</p>
+                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{getRouteText(trip)}</p>
                       </div>
                       <div className="space-y-2 text-right">
                         <TripStatusBadge status={trip.status} />
@@ -315,7 +315,7 @@ export default function TripsPage() {
               )}
             </div>
 
-            <div className="hidden overflow-x-auto md:block">
+            <div className="hidden overflow-x-auto lg:block">
               <table className="min-w-[1040px] w-full text-sm">
                 <thead className="bg-muted/60 text-left text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
                   <tr>
