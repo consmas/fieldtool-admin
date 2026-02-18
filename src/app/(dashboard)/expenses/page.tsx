@@ -24,19 +24,11 @@ import {
   type ExpenseEntry,
   type ExpenseStatus,
 } from "@/lib/api/expenses";
+import {
+  EXPENSE_CATEGORY_OPTIONS,
+  getExpenseCategoryLabel,
+} from "@/lib/constants/expenseCategories";
 import { formatDate } from "@/lib/utils/format";
-
-const CATEGORIES: ExpenseCategory[] = [
-  "fuel",
-  "road_fee",
-  "salary",
-  "purchase",
-  "tires",
-  "maintenance",
-  "repair",
-  "emergency",
-  "other",
-];
 
 const STATUSES: Array<ExpenseStatus | "all"> = ["all", "draft", "pending", "approved", "rejected", "paid"];
 
@@ -73,7 +65,7 @@ export default function ExpensesPage() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [form, setForm] = useState({
-    category: "other" as ExpenseCategory,
+    category: "other_overheads" as ExpenseCategory,
     amount: "",
     description: "",
     trip_id: "",
@@ -127,7 +119,7 @@ export default function ExpensesPage() {
     mutationFn: (payload: Partial<ExpenseEntry>) => createExpense(payload),
     onSuccess: async () => {
       setForm({
-        category: "other",
+        category: "other_overheads",
         amount: "",
         description: "",
         trip_id: "",
@@ -280,9 +272,9 @@ export default function ExpensesPage() {
             className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition focus:border-primary"
           >
             <option value="all">All Categories</option>
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
+            {EXPENSE_CATEGORY_OPTIONS.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
               </option>
             ))}
           </select>
@@ -325,9 +317,9 @@ export default function ExpensesPage() {
             onChange={(e) => setForm((p) => ({ ...p, category: e.target.value as ExpenseCategory }))}
             className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition focus:border-primary"
           >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
+            {EXPENSE_CATEGORY_OPTIONS.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
               </option>
             ))}
           </select>
@@ -511,7 +503,7 @@ export default function ExpensesPage() {
                           className="h-3.5 w-3.5 accent-primary"
                         />
                       </td>
-                      <td className="px-4 py-3 font-semibold text-foreground">{row.category}</td>
+                      <td className="px-4 py-3 font-semibold text-foreground">{getExpenseCategoryLabel(row.category)}</td>
                       <td className="px-4 py-3 text-muted-foreground">
                         <p>{row.description ?? "-"}</p>
                         {row.is_auto_generated ? (
@@ -597,7 +589,7 @@ export default function ExpensesPage() {
               {}
           ).map(([key, value]) => (
             <article key={key} className="rounded-lg border border-border bg-card p-3">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">{key}</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">{getExpenseCategoryLabel(key)}</p>
               <p className="mt-1 font-semibold text-foreground">{formatCurrency(asNumber(value))}</p>
             </article>
           ))}

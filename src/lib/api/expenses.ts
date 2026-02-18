@@ -1,15 +1,15 @@
 import { apiClient } from "@/lib/api/client";
 
 export type ExpenseCategory =
+  | "insurance"
+  | "registration_licensing"
+  | "taxes_levies"
+  | "road_expenses"
   | "fuel"
-  | "road_fee"
-  | "salary"
-  | "purchase"
-  | "tires"
-  | "maintenance"
-  | "repair"
-  | "emergency"
-  | "other";
+  | "repairs_maintenance"
+  | "fleet_staff_costs"
+  | "bank_charges"
+  | "other_overheads";
 
 export type ExpenseStatus = "draft" | "pending" | "approved" | "rejected" | "paid";
 

@@ -7,6 +7,10 @@ import { fetchTrips } from "@/lib/api/trips";
 import { fetchUsers } from "@/lib/api/users";
 import { fetchVehicles } from "@/lib/api/vehicles";
 import {
+  EXPENSE_CATEGORY_OPTIONS,
+  getExpenseCategoryLabel,
+} from "@/lib/constants/expenseCategories";
+import {
   fetchReportsDrivers,
   fetchReportsExpenses,
   fetchReportsOverview,
@@ -372,7 +376,7 @@ export default function ReportsPage() {
         const row = toRecord(item);
         return [
           String(row.trip_id ?? row.trip ?? row.name ?? "-"),
-          String(row.category ?? "-"),
+          getExpenseCategoryLabel(String(row.category ?? "")),
           toNumber(row.total ?? row.amount ?? row.value).toFixed(2),
           String(row.status ?? "-"),
         ];
@@ -529,7 +533,10 @@ export default function ReportsPage() {
 
     const categoryItems = mapTotalsFromAny(
       activeData.by_category ?? activeData.category_totals ?? activeData.categories ?? totals.by_category
-    );
+    ).map((item) => ({
+      ...item,
+      label: getExpenseCategoryLabel(item.label),
+    }));
     const statusItems = mapTotalsFromAny(
       activeData.by_status ?? activeData.status_totals ?? activeData.statuses ?? totals.by_status
     );
@@ -762,12 +769,18 @@ export default function ReportsPage() {
             onChange={(e) => setFilterState((p) => ({ ...p, status: e.target.value }))}
             className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition focus:border-primary"
           />
-          <input
-            placeholder="Category"
+          <select
             value={filterState.category}
             onChange={(e) => setFilterState((p) => ({ ...p, category: e.target.value }))}
             className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition focus:border-primary"
-          />
+          >
+            <option value="">Category</option>
+            {EXPENSE_CATEGORY_OPTIONS.map((categoryOption) => (
+              <option key={categoryOption.value} value={categoryOption.value}>
+                {categoryOption.label}
+              </option>
+            ))}
+          </select>
           <select
             value={filterState.trip_id}
             onChange={(e) => setFilterState((p) => ({ ...p, trip_id: e.target.value }))}
