@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import type { ReactNode } from "react";
-import { AlertTriangle, ArrowUpRight, CheckCircle2, Clock3, Fuel, MapPin, Route, Truck } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, CheckCircle2, Clock3, Fuel, MapPin, Route, Truck, Wrench } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchTrips } from "@/lib/api/trips";
+import { fetchMaintenanceReport } from "@/lib/api/maintenance";
 import type { Trip } from "@/types/api";
 import TripStatusBadge from "@/components/trips/TripStatusBadge";
 import { formatDate } from "@/lib/utils/format";
@@ -103,6 +104,11 @@ export default function OperationsDashboard() {
     queryFn: fetchTrips,
     refetchInterval: 30_000,
   });
+  const { data: maintenanceReport = {} } = useQuery({
+    queryKey: ["maintenance", "dashboard-summary"],
+    queryFn: () => fetchMaintenanceReport(),
+    refetchInterval: 60_000,
+  });
 
   const summary = useMemo(() => {
     const activeStatuses = new Set(["assigned", "loaded", "en_route", "arrived", "offloaded", "in_progress", "in_transit", "delayed"]);
@@ -183,6 +189,15 @@ export default function OperationsDashboard() {
     [trips]
   );
 
+  const maintenanceSummary = useMemo(() => {
+    const report = maintenanceReport as Record<string, unknown>;
+    return {
+      criticalOpen: Number(report.critical_open ?? report.critical_open_work_orders ?? 0) || 0,
+      overdue: Number(report.overdue_count ?? 0) || 0,
+      vehiclesInMaintenance: Number(report.vehicles_in_maintenance ?? 0) || 0,
+    };
+  }, [maintenanceReport]);
+
   return (
     <div className="space-y-4 md:space-y-6">
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -190,6 +205,20 @@ export default function OperationsDashboard() {
         <KpiCard label="Critical Alerts" value={alerts.filter((a) => a.tone === "danger").length} helper={`${alerts.length} total feed items`} icon={<AlertTriangle className="h-4 w-4" />} accent="alerts" />
         <KpiCard label="On-Time Rate" value={`${summary.onTimeRate}%`} helper="Compared with schedule" icon={<Clock3 className="h-4 w-4" />} accent="ontime" />
         <KpiCard label="Pending Inspections" value={summary.pendingInspections} helper={`${summary.totalFuel.toFixed(0)}L allocated`} icon={<CheckCircle2 className="h-4 w-4" />} accent="pending" />
+      </section>
+
+      <section className="grid gap-3 sm:grid-cols-3">
+        <SummaryCard label="Critical Work Orders" value={String(maintenanceSummary.criticalOpen)} icon={<AlertTriangle className="h-4 w-4 text-rose-300" />} />
+        <SummaryCard label="Overdue Maintenance" value={String(maintenanceSummary.overdue)} icon={<Wrench className="h-4 w-4 text-amber-300" />} />
+        <Link href="/maintenance" className="ops-card flex items-center gap-3 p-4 hover:bg-accent/30">
+          <div className="rounded-md border border-border bg-card p-2">
+            <Wrench className="h-4 w-4 text-emerald-300" />
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Vehicles In Maintenance</p>
+            <p className="text-lg font-semibold text-foreground">{maintenanceSummary.vehiclesInMaintenance}</p>
+          </div>
+        </Link>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">

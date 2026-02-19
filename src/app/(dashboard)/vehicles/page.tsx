@@ -54,6 +54,18 @@ export default function VehiclesPage() {
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <Link
+                    href={`/vehicles/${vehicle.id}`}
+                    className="rounded-lg border border-border px-3 py-2 text-center text-xs"
+                  >
+                    View
+                  </Link>
+                  <Link
+                    href={`/maintenance?tab=work_orders&vehicle_id=${vehicle.id}`}
+                    className="rounded-lg border border-border px-3 py-2 text-center text-xs"
+                  >
+                    Maintenance
+                  </Link>
+                  <Link
                     href={`/vehicles/${vehicle.id}/edit`}
                     className="rounded-lg border border-border px-3 py-2 text-center text-xs"
                   >
@@ -96,6 +108,18 @@ export default function VehiclesPage() {
                       <td className="py-3 text-muted-foreground">{vehicle.active ? "Yes" : "No"}</td>
                       <td className="py-3">
                         <div className="flex gap-2">
+                          <Link
+                            href={`/vehicles/${vehicle.id}`}
+                            className="rounded-lg border border-border px-3 py-1 text-xs"
+                          >
+                            View
+                          </Link>
+                          <Link
+                            href={`/maintenance?tab=work_orders&vehicle_id=${vehicle.id}`}
+                            className="rounded-lg border border-border px-3 py-1 text-xs"
+                          >
+                            Maintenance
+                          </Link>
                           <Link
                             href={`/vehicles/${vehicle.id}/edit`}
                             className="rounded-lg border border-border px-3 py-1 text-xs"

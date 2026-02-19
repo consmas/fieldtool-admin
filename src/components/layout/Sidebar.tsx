@@ -17,6 +17,7 @@ import {
   Truck,
   Users,
   Waypoints,
+  Wrench,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils/cn";
@@ -41,6 +42,7 @@ const navItems: NavItem[] = [
   { href: "/trips", label: "Trips", icon: Truck, section: "Operations" },
   { href: "/tracking", label: "Tracking", icon: Map, section: "Operations" },
   { href: "/trip-chats", label: "Trip Chats", icon: MessageSquare, section: "Operations" },
+  { href: "/maintenance", label: "Maintenance", icon: Wrench, section: "Operations" },
   { href: "/destinations", label: "Destinations", icon: MapPin, section: "Operations" },
   { href: "/vehicles", label: "Vehicles", icon: Waypoints, section: "Operations" },
   { href: "/fuel-prices", label: "Fuel Prices", icon: Fuel, section: "Finance" },
