@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download } from "lucide-react";
 import { fetchTrips } from "@/lib/api/trips";
 import { fetchUsers } from "@/lib/api/users";
@@ -100,6 +100,18 @@ function formatPercent(value: number) {
   return `${value.toFixed(2)}%`;
 }
 
+function formatReportDate(value: unknown) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "-";
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw;
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
 function csvEscape(value: unknown) {
   const str = String(value ?? "");
   return `"${str.replace(/"/g, '""')}"`;
@@ -114,6 +126,169 @@ function downloadCsv(filename: string, rows: Array<Array<unknown>>) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function escapeHtml(value: unknown) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function exportPdfFromRows(title: string, columns: string[], rows: Array<Array<unknown>>) {
+  const safeRows = rows.length > 0 ? rows : [["No data"]];
+  const html = `
+    <html>
+      <head>
+        <title>${escapeHtml(title)}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 24px; color: #111827; }
+          h1 { margin: 0 0 16px; font-size: 18px; }
+          table { border-collapse: collapse; width: 100%; font-size: 12px; }
+          th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; }
+          th { background: #f3f4f6; }
+        </style>
+      </head>
+      <body>
+        <h1>${escapeHtml(title)}</h1>
+        <table>
+          <thead>
+            <tr>${columns.map((c) => `<th>${escapeHtml(c)}</th>`).join("")}</tr>
+          </thead>
+          <tbody>
+            ${safeRows
+              .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`)
+              .join("")}
+          </tbody>
+        </table>
+      </body>
+    </html>
+  `;
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.setAttribute("aria-hidden", "true");
+  document.body.appendChild(iframe);
+
+  const cleanup = () => {
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+    }, 500);
+  };
+
+  const doc = iframe.contentDocument ?? iframe.contentWindow?.document;
+  if (!doc || !iframe.contentWindow) {
+    cleanup();
+    return;
+  }
+
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  const triggerPrint = () => {
+    iframe.contentWindow?.focus();
+    iframe.contentWindow?.print();
+    cleanup();
+  };
+
+  if (doc.readyState === "complete") {
+    setTimeout(triggerPrint, 150);
+  } else {
+    iframe.onload = () => setTimeout(triggerPrint, 150);
+  }
+}
+
+function buildFuelExportRows(
+  data: Record<string, unknown>,
+  vehicleRegById: Record<number, string>
+) {
+  const fuelCandidates = getArrayFromAny(data, [
+    "fuel_report",
+    "fuel",
+    "fuel_topups",
+    "items",
+    "data",
+    "by_trip",
+    "trip_expenses",
+    "trips",
+  ]);
+
+  const rows = fuelCandidates.map((item) => {
+    const row = toRecord(item);
+    const topUpAmount = toNumber(
+      row.topup_amount ?? row.amount ?? row.total ?? row.value ?? row.allocated_amount
+    );
+    const usageLiters = toNumber(
+      row.usage_liters ?? row.usage_ltrs ?? row.fuel_litres_total ?? row.fuel_liters ?? row.liters
+    );
+    const pricePerLtr = toNumber(row.price_per_ltr ?? row.price_per_liter ?? row.unit_price ?? row.rate);
+    const usageAmount = toNumber(
+      row.usage_amount ?? row.consumed_amount ?? row.spent_amount ?? usageLiters * pricePerLtr
+    );
+    const balance = toNumber(row.balance ?? topUpAmount - usageAmount);
+    const vehicleId = toNumber(row.vehicle_id);
+    const truckRegNo = String(
+      row.truck_reg_no ?? row.license_plate ?? (vehicleId ? vehicleRegById[vehicleId] : "") ?? "n/a"
+    );
+    return [
+      formatReportDate(row.date ?? row.expense_date ?? row.created_at),
+      topUpAmount.toFixed(2),
+      truckRegNo || "n/a",
+      usageLiters.toFixed(2),
+      pricePerLtr.toFixed(2),
+      usageAmount.toFixed(2),
+      balance.toFixed(2),
+      String(row.remarks ?? row.note ?? row.description ?? ""),
+    ];
+  });
+
+  // Fallback if backend returns only totals/maps
+  if (rows.length === 0) {
+    const totals = toRecord(toRecord(data.totals).by_category ?? data.by_category);
+    const fuelTotal = toNumber(totals.fuel);
+    if (fuelTotal > 0) {
+      rows.push([
+        formatReportDate(new Date().toISOString()),
+        fuelTotal.toFixed(2),
+        "n/a",
+        "0.00",
+        "0.00",
+        "0.00",
+        fuelTotal.toFixed(2),
+        "",
+      ]);
+    }
+  }
+
+  // Secondary fallback: derive rows from by_vehicle aggregates
+  if (rows.length === 0) {
+    const dimensions = toRecord(data.dimensions);
+    const byVehicle = toRecord(dimensions.by_vehicle ?? data.by_vehicle);
+    Object.entries(byVehicle).forEach(([vehicleId, rawAmount]) => {
+      const amount = toNumber(rawAmount);
+      if (amount <= 0) return;
+      const id = Number(vehicleId);
+      rows.push([
+        formatReportDate(new Date().toISOString()),
+        amount.toFixed(2),
+        vehicleRegById[id] ?? `Vehicle ${vehicleId}`,
+        "0.00",
+        "0.00",
+        "0.00",
+        amount.toFixed(2),
+        "Derived from aggregated fuel totals",
+      ]);
+    });
+  }
+
+  return rows;
 }
 
 function getOverviewMetrics(activeData: Record<string, unknown>) {
@@ -266,6 +441,7 @@ function SimpleTable({
 }
 
 export default function ReportsPage() {
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<TabKey>("overview");
   const [filterState, setFilterState] = useState({
     date_from: "",
@@ -306,6 +482,13 @@ export default function ReportsPage() {
   );
   const vehicleNameById = useMemo(
     () => Object.fromEntries(vehicles.map((v) => [v.id, String(v.name ?? `Vehicle ${v.id}`)])),
+    [vehicles]
+  );
+  const vehicleRegById = useMemo(
+    () =>
+      Object.fromEntries(
+        vehicles.map((v) => [v.id, String(v.license_plate ?? v.name ?? `Vehicle ${v.id}`)])
+      ),
     [vehicles]
   );
 
@@ -384,6 +567,25 @@ export default function ReportsPage() {
     }
 
     if (tab === "expenses") {
+      if (filterState.category === "fuel") {
+        const rows = buildFuelExportRows(activeData, vehicleRegById);
+
+        downloadCsv(filename, [
+          [
+            "Date",
+            "TopUp Amount",
+            "Truck Reg No.",
+            "Usage (Ltrs)",
+            "Price per Ltr",
+            "Usage Amount",
+            "Balance",
+            "Remarks",
+          ],
+          ...rows,
+        ]);
+        return;
+      }
+
       const rows = getArrayFromAny(activeData, ["by_trip", "trip_expenses", "trips"]).map((item) => {
         const row = toRecord(item);
         return [
@@ -425,6 +627,113 @@ export default function ReportsPage() {
       ];
     });
     downloadCsv(filename, [["Vehicle", "Trips", "Distance (km)", "Fuel (L)", "Maintenance (GHS)", "Repair (GHS)"], ...vehicleRows]);
+  };
+
+  const exportCurrentTabPdf = () => {
+    const title = `Reports - ${tab}`;
+
+    if (tab === "overview") {
+      const { totalTrips, completionRate, totalDistance, totalExpense, costPerKm } = getOverviewMetrics(activeData);
+      exportPdfFromRows(title, ["Metric", "Value"], [
+        ["Trips Total", totalTrips],
+        ["Completion Rate (%)", completionRate.toFixed(2)],
+        ["Total Distance (km)", totalDistance.toFixed(2)],
+        ["Total Expense (GHS)", totalExpense.toFixed(2)],
+        ["Cost per KM (GHS)", costPerKm.toFixed(2)],
+      ]);
+      return;
+    }
+
+    if (tab === "trips") {
+      const totals = toRecord(activeData.totals);
+      const timeline = toRecord(activeData.timeline);
+      const statusItems = mapTotalsFromAny(
+        activeData.status_breakdown ?? activeData.statuses ?? totals.status_breakdown ?? totals.by_status
+      );
+      const createdMap = toRecord(timeline.created_daily);
+      const completedMap = toRecord(timeline.completed_daily);
+      const dates = Array.from(new Set([...Object.keys(createdMap), ...Object.keys(completedMap)])).sort();
+      const rows: Array<Array<unknown>> = [
+        ...statusItems.map((item) => ["Status", item.label, item.value.toFixed(2)]),
+        ...dates.map((date) => ["Trend", `${date} created`, toNumber(createdMap[date]).toFixed(2)]),
+        ...dates.map((date) => ["Trend", `${date} completed`, toNumber(completedMap[date]).toFixed(2)]),
+      ];
+      exportPdfFromRows(title, ["Section", "Label", "Value"], rows);
+      return;
+    }
+
+    if (tab === "expenses") {
+      if (filterState.category === "fuel") {
+        const rows = buildFuelExportRows(activeData, vehicleRegById);
+        exportPdfFromRows(title, ["Date", "TopUp Amount", "Truck Reg No.", "Usage (Ltrs)", "Price per Ltr", "Usage Amount", "Balance", "Remarks"], rows);
+        return;
+      }
+
+      const rows = getArrayFromAny(activeData, ["by_trip", "trip_expenses", "trips"]).map((item) => {
+        const row = toRecord(item);
+        return [
+          String(row.trip_id ?? row.trip ?? row.name ?? "-"),
+          getExpenseCategoryLabel(String(row.category ?? "")),
+          toNumber(row.total ?? row.amount ?? row.value).toFixed(2),
+          String(row.status ?? "-"),
+        ];
+      });
+      exportPdfFromRows(title, ["Trip", "Category", "Amount (GHS)", "Status"], rows);
+      return;
+    }
+
+    if (tab === "drivers") {
+      const rows = getArrayFromAny(activeData, ["drivers", "items", "data"]).map((item) => {
+        const row = toRecord(item);
+        return [
+          String(row.driver_name ?? row.name ?? row.driver ?? row.driver_id ?? "-"),
+          toNumber(row.trips_total ?? row.total_trips).toFixed(2),
+          toNumber(row.trips_completed ?? row.completed_trips).toFixed(2),
+          toNumber(row.completion_rate ?? row.completion_pct ?? row.completion_rate_pct).toFixed(2),
+          toNumber(row.incidents ?? row.incident_count ?? row.incidents_count).toFixed(2),
+          toNumber(row.expenses ?? row.total_expense ?? row.expenses_total).toFixed(2),
+        ];
+      });
+      exportPdfFromRows(title, ["Driver", "Trips", "Completed", "Completion %", "Incidents", "Expenses (GHS)"], rows);
+      return;
+    }
+
+    const rows = getArrayFromAny(activeData, ["vehicles", "items", "data"]).map((item) => {
+      const row = toRecord(item);
+      return [
+        String(row.vehicle_name ?? row.name ?? row.vehicle ?? row.vehicle_id ?? "-"),
+        toNumber(row.trips ?? row.total_trips ?? row.trips_total).toFixed(2),
+        toNumber(row.distance ?? row.total_distance_km ?? row.distance_km_total).toFixed(2),
+        toNumber(row.fuel_liters ?? row.fuel_used_liters ?? row.fuel_litres_total).toFixed(2),
+        toNumber(row.maintenance_total ?? row.maintenance).toFixed(2),
+        toNumber(row.repair_total ?? row.repair).toFixed(2),
+      ];
+    });
+    exportPdfFromRows(title, ["Vehicle", "Trips", "Distance (km)", "Fuel (L)", "Maintenance (GHS)", "Repair (GHS)"], rows);
+  };
+
+  const getFuelDataForExport = async () => {
+    const fuelFilters: ReportFilters = { ...filters, category: "fuel" };
+    const data = await queryClient.fetchQuery({
+      queryKey: ["reports", "expenses", fuelFilters, "fuel-export"],
+      queryFn: () => fetchReportsExpenses(fuelFilters),
+    });
+    return toRecord(data);
+  };
+
+  const exportFuelCsv = async () => {
+    const fuelData = await getFuelDataForExport();
+    const rows = buildFuelExportRows(fuelData, vehicleRegById);
+    downloadCsv("reports-fuel-expenses.csv", [
+      ["Date", "TopUp Amount", "Truck Reg No.", "Usage (Ltrs)", "Price per Ltr", "Usage Amount", "Balance", "Remarks"],
+      ...rows,
+    ]);
+  };
+
+  const exportFuelPdf = async () => {
+    const fuelData = await getFuelDataForExport();
+    const rows = buildFuelExportRows(fuelData, vehicleRegById);
+    exportPdfFromRows("Reports - fuel_expenses", ["Date", "TopUp Amount", "Truck Reg No.", "Usage (Ltrs)", "Price per Ltr", "Usage Amount", "Balance", "Remarks"], rows);
   };
 
   const renderOverview = () => {
@@ -751,14 +1060,44 @@ export default function ReportsPage() {
           <h2 className="text-xl font-semibold">Fleet Reporting</h2>
           <p className="text-sm text-muted-foreground">Operational reporting powered by backend analytics endpoints.</p>
         </div>
-        <button
-          type="button"
-          onClick={exportCurrentTab}
-          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <Download className="h-4 w-4" />
-          Export CSV
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={exportCurrentTab}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </button>
+          <button
+            type="button"
+            onClick={exportCurrentTabPdf}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <Download className="h-4 w-4" />
+            Export PDF
+          </button>
+          {tab === "expenses" ? (
+            <>
+              <button
+                type="button"
+                onClick={exportFuelCsv}
+                className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
+              >
+                <Download className="h-4 w-4" />
+                Export Fuel CSV
+              </button>
+              <button
+                type="button"
+                onClick={exportFuelPdf}
+                className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
+              >
+                <Download className="h-4 w-4" />
+                Export Fuel PDF
+              </button>
+            </>
+          ) : null}
+        </div>
       </div>
 
       <section className="ops-card p-4">
