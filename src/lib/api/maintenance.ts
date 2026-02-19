@@ -118,13 +118,15 @@ export async function fetchVehicleDocuments(vehicleId: number) {
   return unwrapArray(data);
 }
 
-export async function createVehicleDocument(vehicleId: number, payload: UnknownMap) {
-  const { data } = await apiClient.post(`/api/v1/vehicles/${vehicleId}/documents`, payload);
+export async function createVehicleDocument(vehicleId: number, payload: UnknownMap | FormData) {
+  const config = payload instanceof FormData ? { headers: { "Content-Type": "multipart/form-data" } } : undefined;
+  const { data } = await apiClient.post(`/api/v1/vehicles/${vehicleId}/documents`, payload, config);
   return unwrapObject(data);
 }
 
-export async function updateVehicleDocument(vehicleId: number, documentId: number, payload: UnknownMap) {
-  const { data } = await apiClient.patch(`/api/v1/vehicles/${vehicleId}/documents/${documentId}`, payload);
+export async function updateVehicleDocument(vehicleId: number, documentId: number, payload: UnknownMap | FormData) {
+  const config = payload instanceof FormData ? { headers: { "Content-Type": "multipart/form-data" } } : undefined;
+  const { data } = await apiClient.patch(`/api/v1/vehicles/${vehicleId}/documents/${documentId}`, payload, config);
   return unwrapObject(data);
 }
 

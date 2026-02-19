@@ -166,7 +166,15 @@ export default function MaintenancePage() {
   const [woFormMessage, setWoFormMessage] = useState("");
 
   const [vendorForm, setVendorForm] = useState({ id: "", name: "", contact_person: "", phone: "", email: "" });
-  const [documentsState, setDocumentsState] = useState({ vehicle_id: initialTab === "documents" ? initialVehicleIdParam : "", title: "", type: "", expiry_date: "", file_url: "", id: "" });
+  const [documentsState, setDocumentsState] = useState({
+    vehicle_id: initialTab === "documents" ? initialVehicleIdParam : "",
+    title: "",
+    type: "",
+    expiry_date: "",
+    file_url: "",
+    id: "",
+  });
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [reportVehicleId, setReportVehicleId] = useState(initialTab === "reports" ? initialVehicleIdParam : "");
 
   const { data: vehicles = [] } = useQuery({ queryKey: ["vehicles", "maintenance"], queryFn: fetchVehicles });
@@ -278,13 +286,21 @@ export default function MaintenancePage() {
   });
 
   const documentCreateMutation = useMutation({
-    mutationFn: ({ vehicleId, payload }: { vehicleId: number; payload: Record<string, unknown> }) =>
+    mutationFn: ({ vehicleId, payload }: { vehicleId: number; payload: Record<string, unknown> | FormData }) =>
       createVehicleDocument(vehicleId, payload),
     onSuccess: async () =>
       queryClient.invalidateQueries({ queryKey: ["maintenance", "vehicle_documents", documentsState.vehicle_id] }),
   });
   const documentUpdateMutation = useMutation({
-    mutationFn: ({ vehicleId, documentId, payload }: { vehicleId: number; documentId: number; payload: Record<string, unknown> }) =>
+    mutationFn: ({
+      vehicleId,
+      documentId,
+      payload,
+    }: {
+      vehicleId: number;
+      documentId: number;
+      payload: Record<string, unknown> | FormData;
+    }) =>
       updateVehicleDocument(vehicleId, documentId, payload),
     onSuccess: async () =>
       queryClient.invalidateQueries({ queryKey: ["maintenance", "vehicle_documents", documentsState.vehicle_id] }),
@@ -944,18 +960,33 @@ export default function MaintenancePage() {
               <input value={documentsState.title} onChange={(e) => setDocumentsState((p) => ({ ...p, title: e.target.value }))} placeholder="Title" className="rounded-lg border border-border bg-card px-3 py-2 text-sm" />
               <input value={documentsState.type} onChange={(e) => setDocumentsState((p) => ({ ...p, type: e.target.value }))} placeholder="Type" className="rounded-lg border border-border bg-card px-3 py-2 text-sm" />
               <input type="date" value={documentsState.expiry_date} onChange={(e) => setDocumentsState((p) => ({ ...p, expiry_date: e.target.value }))} className="rounded-lg border border-border bg-card px-3 py-2 text-sm" />
-              <input value={documentsState.file_url} onChange={(e) => setDocumentsState((p) => ({ ...p, file_url: e.target.value }))} placeholder="File URL" className="rounded-lg border border-border bg-card px-3 py-2 text-sm" />
+              <label className="flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground">
+                <input
+                  type="file"
+                  onChange={(e) => setDocumentFile(e.target.files?.[0] ?? null)}
+                  className="w-full text-xs file:mr-2 file:rounded file:border file:border-border file:bg-muted file:px-2 file:py-1"
+                />
+              </label>
               <button
                 type="button"
                 className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
                 onClick={() => {
                   if (!documentsState.vehicle_id) return;
-                  const payload = {
+                  let payload: Record<string, unknown> | FormData = {
                     title: documentsState.title,
                     type: documentsState.type,
                     expiry_date: documentsState.expiry_date || undefined,
                     file_url: documentsState.file_url || undefined,
                   };
+                  if (documentFile) {
+                    const formData = new FormData();
+                    if (documentsState.title) formData.append("title", documentsState.title);
+                    if (documentsState.type) formData.append("type", documentsState.type);
+                    if (documentsState.expiry_date) formData.append("expiry_date", documentsState.expiry_date);
+                    if (documentsState.file_url) formData.append("file_url", documentsState.file_url);
+                    formData.append("file", documentFile);
+                    payload = formData;
+                  }
                   if (documentsState.id) {
                     documentUpdateMutation.mutate({
                       vehicleId: Number(documentsState.vehicle_id),
@@ -965,11 +996,15 @@ export default function MaintenancePage() {
                   } else {
                     documentCreateMutation.mutate({ vehicleId: Number(documentsState.vehicle_id), payload });
                   }
+                  setDocumentFile(null);
                 }}
               >
                 {documentsState.id ? "Update Doc" : "Add Doc"}
               </button>
             </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {documentFile ? `Selected file: ${documentFile.name}` : "Select a file to upload. URL is optional fallback."}
+            </p>
           </section>
 
           <div className="grid gap-4 xl:grid-cols-2">
@@ -1017,6 +1052,16 @@ export default function MaintenancePage() {
                           >
                             Edit
                           </button>
+                          {doc.file_url ? (
+                            <a
+                              href={String(doc.file_url)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="ml-2 rounded border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                            >
+                              View File
+                            </a>
+                          ) : null}
                         </div>
                       </article>
                     );

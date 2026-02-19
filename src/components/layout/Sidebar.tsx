@@ -51,6 +51,7 @@ const navItems: NavItem[] = [
   { href: "/expenses", label: "Expenses", icon: ReceiptText, section: "Finance" },
   { href: "/reports", label: "Reports", icon: FileText, section: "Finance" },
   { href: "/users", label: "Users", icon: Users, section: "Finance" },
+  { href: "/client-users", label: "Client Users", icon: Users, section: "Finance" },
 ];
 
 const dispatcherAllowed = new Set([
@@ -61,6 +62,7 @@ const dispatcherAllowed = new Set([
   "/destinations",
   "/fuel-prices",
   "/expenses",
+  "/client-users",
   "/trips",
 ]);
 
