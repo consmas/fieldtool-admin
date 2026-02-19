@@ -14,6 +14,13 @@ const emptyForm = {
   truck_type_capacity: "",
   vin: "",
   notes: "",
+  insurance_policy_number: "",
+  insurance_provider: "",
+  insurance_issued_at: "",
+  insurance_expires_at: "",
+  insurance_coverage_amount: "",
+  insurance_notes: "",
+  insurance_document_url: "",
   active: true,
 };
 
@@ -56,6 +63,13 @@ export default function CreateVehiclePage() {
             truck_type_capacity: form.truck_type_capacity || undefined,
             vin: form.vin || undefined,
             notes: form.notes || undefined,
+            insurance_policy_number: form.insurance_policy_number || undefined,
+            insurance_provider: form.insurance_provider || undefined,
+            insurance_issued_at: form.insurance_issued_at || undefined,
+            insurance_expires_at: form.insurance_expires_at || undefined,
+            insurance_coverage_amount: form.insurance_coverage_amount || undefined,
+            insurance_notes: form.insurance_notes || undefined,
+            insurance_document_url: form.insurance_document_url || undefined,
             active: form.active,
           };
 
@@ -108,6 +122,56 @@ export default function CreateVehiclePage() {
             />
           </div>
           <div>
+            <label className="text-xs uppercase tracking-widest text-muted-foreground">Insurance Policy Number</label>
+            <input
+              value={form.insurance_policy_number}
+              onChange={(event) => setForm((prev) => ({ ...prev, insurance_policy_number: event.target.value }))}
+              className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs uppercase tracking-widest text-muted-foreground">Insurance Provider</label>
+            <input
+              value={form.insurance_provider}
+              onChange={(event) => setForm((prev) => ({ ...prev, insurance_provider: event.target.value }))}
+              className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs uppercase tracking-widest text-muted-foreground">Insurance Issued At</label>
+            <input
+              type="date"
+              value={form.insurance_issued_at}
+              onChange={(event) => setForm((prev) => ({ ...prev, insurance_issued_at: event.target.value }))}
+              className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs uppercase tracking-widest text-muted-foreground">Insurance Expires At</label>
+            <input
+              type="date"
+              value={form.insurance_expires_at}
+              onChange={(event) => setForm((prev) => ({ ...prev, insurance_expires_at: event.target.value }))}
+              className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs uppercase tracking-widest text-muted-foreground">Insurance Coverage Amount</label>
+            <input
+              value={form.insurance_coverage_amount}
+              onChange={(event) => setForm((prev) => ({ ...prev, insurance_coverage_amount: event.target.value }))}
+              className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs uppercase tracking-widest text-muted-foreground">Insurance Document URL</label>
+            <input
+              value={form.insurance_document_url}
+              onChange={(event) => setForm((prev) => ({ ...prev, insurance_document_url: event.target.value }))}
+              className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
             <label className="text-xs uppercase tracking-widest text-muted-foreground">Active</label>
             <select
               value={form.active ? "true" : "false"}
@@ -123,6 +187,14 @@ export default function CreateVehiclePage() {
             <input
               value={form.notes}
               onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
+              className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="text-xs uppercase tracking-widest text-muted-foreground">Insurance Notes</label>
+            <input
+              value={form.insurance_notes}
+              onChange={(event) => setForm((prev) => ({ ...prev, insurance_notes: event.target.value }))}
               className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
             />
           </div>

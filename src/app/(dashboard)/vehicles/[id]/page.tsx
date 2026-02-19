@@ -99,6 +99,16 @@ function getTemplateNextDueAt(row: Record<string, unknown>) {
   ).trim();
 }
 
+function insuranceStatus(expiry?: string | null) {
+  if (!expiry) return { label: "Missing", className: "border-rose-500/30 bg-rose-500/10 text-rose-300" };
+  const ts = new Date(expiry).getTime();
+  if (!Number.isFinite(ts)) return { label: "Unknown", className: "border-border bg-card text-muted-foreground" };
+  const days = Math.ceil((ts - Date.now()) / (24 * 60 * 60 * 1000));
+  if (days < 0) return { label: "Expired", className: "border-rose-500/30 bg-rose-500/10 text-rose-300" };
+  if (days <= 30) return { label: "Expiring Soon", className: "border-amber-500/30 bg-amber-500/10 text-amber-300" };
+  return { label: "Active", className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" };
+}
+
 type ScheduleRow = Record<string, unknown> & {
   __template_id: unknown | null;
   __template_name: string;
@@ -329,6 +339,11 @@ export default function VehicleDetailPage() {
           <p className="text-sm text-muted-foreground">
             Plate: {vehicle.license_plate ?? "-"} · Kind: {vehicle.kind} · Active: {vehicle.active ? "Yes" : "No"}
           </p>
+          <div className="mt-2">
+            <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${insuranceStatus(vehicle.insurance_expires_at).className}`}>
+              Insurance: {insuranceStatus(vehicle.insurance_expires_at).label}
+            </span>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href={`/maintenance?tab=work_orders&vehicle_id=${vehicleId}`} className="rounded-lg border border-border px-3 py-2 text-sm">
@@ -538,6 +553,30 @@ export default function VehicleDetailPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
+        <section className="ops-card p-4">
+          <h3 className="mb-3 text-sm font-semibold">Insurance</h3>
+          <div className="space-y-1 text-sm">
+            <p className="text-muted-foreground">Policy: <span className="text-foreground">{vehicle.insurance_policy_number ?? "-"}</span></p>
+            <p className="text-muted-foreground">Provider: <span className="text-foreground">{vehicle.insurance_provider ?? "-"}</span></p>
+            <p className="text-muted-foreground">Issued: <span className="text-foreground">{vehicle.insurance_issued_at ?? "-"}</span></p>
+            <p className="text-muted-foreground">Expires: <span className="text-foreground">{vehicle.insurance_expires_at ?? "-"}</span></p>
+            <p className="text-muted-foreground">Coverage: <span className="text-foreground">{vehicle.insurance_coverage_amount ?? "-"}</span></p>
+            <p className="text-muted-foreground">Notes: <span className="text-foreground">{vehicle.insurance_notes ?? "-"}</span></p>
+            {vehicle.insurance?.document_url || vehicle.insurance_document_url ? (
+              <a
+                href={String(vehicle.insurance?.document_url ?? vehicle.insurance_document_url)}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-block rounded border border-border px-2 py-1 text-xs"
+              >
+                Open Insurance File
+              </a>
+            ) : (
+              <p className="text-xs text-muted-foreground">No insurance file attached.</p>
+            )}
+          </div>
+        </section>
+
         <section className="ops-card p-4">
           <h3 className="mb-3 text-sm font-semibold">Vehicle Documents</h3>
           {documentsQuery.isLoading ? <p className="text-sm text-muted-foreground">Loading documents...</p> : null}

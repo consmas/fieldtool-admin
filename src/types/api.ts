@@ -218,6 +218,16 @@ export interface Vehicle {
   notes?: string | null;
   active: boolean;
   truck_type_capacity?: string | null;
+  insurance_policy_number?: string | null;
+  insurance_provider?: string | null;
+  insurance_issued_at?: string | null;
+  insurance_expires_at?: string | null;
+  insurance_coverage_amount?: number | string | null;
+  insurance_notes?: string | null;
+  insurance?: {
+    document_url?: string | null;
+  } | null;
+  insurance_document_url?: string | null;
 }
 
 export interface Destination {

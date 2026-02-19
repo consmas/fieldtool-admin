@@ -4,6 +4,16 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteVehicle, fetchVehicles } from "@/lib/api/vehicles";
 
+function insuranceStatus(expiry?: string | null) {
+  if (!expiry) return { label: "Missing", className: "border-rose-500/30 bg-rose-500/10 text-rose-300" };
+  const ts = new Date(expiry).getTime();
+  if (!Number.isFinite(ts)) return { label: "Unknown", className: "border-border bg-card text-muted-foreground" };
+  const days = Math.ceil((ts - Date.now()) / (24 * 60 * 60 * 1000));
+  if (days < 0) return { label: "Expired", className: "border-rose-500/30 bg-rose-500/10 text-rose-300" };
+  if (days <= 30) return { label: "Expiring Soon", className: "border-amber-500/30 bg-amber-500/10 text-amber-300" };
+  return { label: "Active", className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" };
+}
+
 export default function VehiclesPage() {
   const queryClient = useQueryClient();
   const { data: vehicles = [], isLoading, isError } = useQuery({
@@ -51,6 +61,12 @@ export default function VehiclesPage() {
                   <p>Capacity: {vehicle.truck_type_capacity ?? "-"}</p>
                   <p>Kind: {vehicle.kind}</p>
                   <p>Active: {vehicle.active ? "Yes" : "No"}</p>
+                  <p>
+                    Insurance:{" "}
+                    <span className={`rounded-full border px-1.5 py-0.5 text-[10px] ${insuranceStatus(vehicle.insurance_expires_at).className}`}>
+                      {insuranceStatus(vehicle.insurance_expires_at).label}
+                    </span>
+                  </p>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <Link
@@ -95,6 +111,7 @@ export default function VehiclesPage() {
                     <th className="py-2">Name</th>
                     <th className="py-2">Truck Reg. No.</th>
                     <th className="py-2">Truck Capacity</th>
+                    <th className="py-2">Insurance</th>
                     <th className="py-2">Active</th>
                     <th className="py-2">Actions</th>
                   </tr>
@@ -105,6 +122,11 @@ export default function VehiclesPage() {
                       <td className="py-3">{vehicle.name}</td>
                       <td className="py-3 text-muted-foreground">{vehicle.license_plate ?? "-"}</td>
                       <td className="py-3 text-muted-foreground">{vehicle.truck_type_capacity ?? "-"}</td>
+                      <td className="py-3">
+                        <span className={`rounded-full border px-2 py-0.5 text-[11px] ${insuranceStatus(vehicle.insurance_expires_at).className}`}>
+                          {insuranceStatus(vehicle.insurance_expires_at).label}
+                        </span>
+                      </td>
                       <td className="py-3 text-muted-foreground">{vehicle.active ? "Yes" : "No"}</td>
                       <td className="py-3">
                         <div className="flex gap-2">

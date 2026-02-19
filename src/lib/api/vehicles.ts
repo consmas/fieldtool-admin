@@ -12,12 +12,24 @@ export async function fetchVehicle(id: number): Promise<Vehicle | null> {
   return data ?? null;
 }
 
-export async function createVehicle(payload: Partial<Vehicle>) {
+export async function createVehicle(payload: Partial<Vehicle> | FormData) {
+  if (payload instanceof FormData) {
+    const { data } = await apiClient.post<Vehicle>("/vehicles", payload, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data;
+  }
   const { data } = await apiClient.post<Vehicle>("/vehicles", { vehicle: payload });
   return data;
 }
 
-export async function updateVehicle(id: number, payload: Partial<Vehicle>) {
+export async function updateVehicle(id: number, payload: Partial<Vehicle> | FormData) {
+  if (payload instanceof FormData) {
+    const { data } = await apiClient.patch<Vehicle>(`/vehicles/${id}`, payload, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data;
+  }
   const { data } = await apiClient.patch<Vehicle>(`/vehicles/${id}`, { vehicle: payload });
   return data;
 }

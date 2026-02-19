@@ -59,6 +59,13 @@ export default function EditVehiclePage() {
             truck_type_capacity: String(fd.get("truck_type_capacity") ?? "") || undefined,
             vin: String(fd.get("vin") ?? "") || undefined,
             notes: String(fd.get("notes") ?? "") || undefined,
+            insurance_policy_number: String(fd.get("insurance_policy_number") ?? "") || undefined,
+            insurance_provider: String(fd.get("insurance_provider") ?? "") || undefined,
+            insurance_issued_at: String(fd.get("insurance_issued_at") ?? "") || undefined,
+            insurance_expires_at: String(fd.get("insurance_expires_at") ?? "") || undefined,
+            insurance_coverage_amount: String(fd.get("insurance_coverage_amount") ?? "") || undefined,
+            insurance_notes: String(fd.get("insurance_notes") ?? "") || undefined,
+            insurance_document_url: String(fd.get("insurance_document_url") ?? "") || undefined,
             active: String(fd.get("active") ?? "true") === "true",
           });
         }}
@@ -89,6 +96,30 @@ export default function EditVehiclePage() {
             <input name="vin" defaultValue={vehicle.vin ?? ""} className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm" />
           </div>
           <div>
+            <label className="text-xs uppercase tracking-widest text-muted-foreground">Insurance Policy Number</label>
+            <input name="insurance_policy_number" defaultValue={vehicle.insurance_policy_number ?? ""} className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="text-xs uppercase tracking-widest text-muted-foreground">Insurance Provider</label>
+            <input name="insurance_provider" defaultValue={vehicle.insurance_provider ?? ""} className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="text-xs uppercase tracking-widest text-muted-foreground">Insurance Issued At</label>
+            <input type="date" name="insurance_issued_at" defaultValue={vehicle.insurance_issued_at ?? ""} className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="text-xs uppercase tracking-widest text-muted-foreground">Insurance Expires At</label>
+            <input type="date" name="insurance_expires_at" defaultValue={vehicle.insurance_expires_at ?? ""} className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="text-xs uppercase tracking-widest text-muted-foreground">Insurance Coverage Amount</label>
+            <input name="insurance_coverage_amount" defaultValue={String(vehicle.insurance_coverage_amount ?? "")} className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="text-xs uppercase tracking-widest text-muted-foreground">Insurance Document URL</label>
+            <input name="insurance_document_url" defaultValue={vehicle.insurance?.document_url ?? vehicle.insurance_document_url ?? ""} className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm" />
+          </div>
+          <div>
             <label className="text-xs uppercase tracking-widest text-muted-foreground">Active</label>
             <select name="active" defaultValue={vehicle.active ? "true" : "false"} className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm">
               <option value="true">true</option>
@@ -98,6 +129,10 @@ export default function EditVehiclePage() {
           <div className="md:col-span-2">
             <label className="text-xs uppercase tracking-widest text-muted-foreground">Notes</label>
             <input name="notes" defaultValue={vehicle.notes ?? ""} className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm" />
+          </div>
+          <div className="md:col-span-2">
+            <label className="text-xs uppercase tracking-widest text-muted-foreground">Insurance Notes</label>
+            <input name="insurance_notes" defaultValue={vehicle.insurance_notes ?? ""} className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm" />
           </div>
         </div>
 
