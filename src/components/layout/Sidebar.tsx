@@ -22,6 +22,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils/cn";
 import { fetchChatInbox } from "@/lib/api/chat";
+import { fetchNotificationsUnreadCount } from "@/lib/api/notifications";
 import { useAuthStore } from "@/stores/auth.store";
 
 type NavItem = {
@@ -39,6 +40,7 @@ type SidebarProps = {
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: ChartColumnIncreasing, section: "Command" },
   { href: "/logistics", label: "Logistics", icon: ClipboardCheck, section: "Command" },
+  { href: "/notifications", label: "Notifications", icon: Bell, section: "Command" },
   { href: "/trips", label: "Trips", icon: Truck, section: "Operations" },
   { href: "/tracking", label: "Tracking", icon: Map, section: "Operations" },
   { href: "/trip-chats", label: "Trip Chats", icon: MessageSquare, section: "Operations" },
@@ -55,6 +57,7 @@ const dispatcherAllowed = new Set([
   "/reports",
   "/logistics",
   "/trip-chats",
+  "/notifications",
   "/destinations",
   "/fuel-prices",
   "/expenses",
@@ -74,6 +77,17 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   });
 
   const unreadCount = inbox.reduce((sum, row) => sum + (Number(row.unread_count) || 0), 0);
+  const { data: notificationUnread = {} } = useQuery({
+    queryKey: ["notifications", "unread-count"],
+    queryFn: fetchNotificationsUnreadCount,
+    refetchInterval: 20_000,
+  });
+  const notificationsUnreadCount =
+    Number(
+      (notificationUnread as Record<string, unknown>).unread_count ??
+        (notificationUnread as Record<string, unknown>).count ??
+        0
+    ) || 0;
 
   useEffect(() => {
     onClose();
@@ -152,6 +166,11 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
                     {item.href === "/trip-chats" && unreadCount > 0 ? (
                       <span className="ml-auto rounded-full bg-rose-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-rose-300">
                         {unreadCount}
+                      </span>
+                    ) : null}
+                    {item.href === "/notifications" && notificationsUnreadCount > 0 ? (
+                      <span className="ml-auto rounded-full bg-rose-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-rose-300">
+                        {notificationsUnreadCount}
                       </span>
                     ) : null}
                   </Link>
