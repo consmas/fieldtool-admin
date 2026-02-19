@@ -99,6 +99,14 @@ function getTemplateNextDueAt(row: Record<string, unknown>) {
   ).trim();
 }
 
+type ScheduleRow = Record<string, unknown> & {
+  __template_id: unknown | null;
+  __template_name: string;
+  __interval_days: number;
+  __next_due_km: number | null;
+  __next_due_at: string;
+};
+
 function Kpi({ label, value, tone }: { label: string; value: string; tone?: "red" | "amber" | "green" }) {
   return (
     <article
@@ -238,17 +246,19 @@ export default function VehicleDetailPage() {
   const expenses = useMemo(() => expensesQuery.data?.items ?? [], [expensesQuery.data?.items]);
   const workOrders = useMemo(() => asList(workOrdersQuery.data), [workOrdersQuery.data]);
   const documents = useMemo(() => asList(documentsQuery.data), [documentsQuery.data]);
-  const schedules = useMemo(() => {
+  const schedules = useMemo<ScheduleRow[]>(() => {
     const rows = asList(schedulesQuery.data);
     return rows
-      .map((row) => ({
+      .map(
+        (row): ScheduleRow => ({
         ...row,
         __template_id: getTemplateId(row),
         __template_name: getTemplateName(row),
         __interval_days: getTemplateIntervalDays(row),
         __next_due_km: getTemplateNextDueKm(row),
         __next_due_at: getTemplateNextDueAt(row),
-      }))
+        })
+      )
       .filter((row) => {
         return Boolean(
           row.__template_id ||
