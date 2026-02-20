@@ -5,6 +5,11 @@ import { ReactQueryProvider } from "@/lib/utils/react-query-provider";
 export const metadata: Metadata = {
   title: "Axle Admin",
   description: "Axle fleet operations admin dashboard",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
