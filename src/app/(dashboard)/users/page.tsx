@@ -28,12 +28,20 @@ export default function UsersPage() {
             View admins, dispatchers, supervisors, and drivers.
           </p>
         </div>
-        <Link
-          href="/users/new"
-          className="w-full rounded-xl bg-primary px-4 py-2 text-center text-sm font-semibold text-primary-foreground sm:w-auto"
-        >
-          Create User
-        </Link>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <Link
+            href="/client-users"
+            className="w-full rounded-xl border border-border px-4 py-2 text-center text-sm font-semibold text-foreground sm:w-auto"
+          >
+            Client Users
+          </Link>
+          <Link
+            href="/users/new"
+            className="w-full rounded-xl bg-primary px-4 py-2 text-center text-sm font-semibold text-primary-foreground sm:w-auto"
+          >
+            Create User
+          </Link>
+        </div>
       </div>
 
       {isLoading ? (

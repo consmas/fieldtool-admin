@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { clientLogin } from "@/lib/api/client-portal";
 import { useClientAuthStore } from "@/stores/client-auth.store";
 import ThemeToggle from "@/components/theme/ThemeToggle";
+import { AxleLogo, AxleLogomark, AXLE_BRAND } from "@/components/branding/AxleLogo";
 
 export default function ClientLoginPage() {
   const router = useRouter();
@@ -40,7 +41,10 @@ export default function ClientLoginPage() {
       </div>
       <div className="mx-auto mt-8 grid max-w-5xl gap-6 lg:grid-cols-2">
         <section className="ops-card hidden p-8 lg:block">
-          <p className="ops-section-title">Axle Client Portal</p>
+          <div className="mb-3 flex items-center gap-2">
+            <AxleLogomark size={22} color={AXLE_BRAND.amberLight} />
+            <p className="ops-section-title">Axle Client Portal</p>
+          </div>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight">Track your shipments and billing in real-time.</h1>
           <ul className="mt-6 space-y-3 text-sm text-muted-foreground">
             <li>Live shipment status and event timeline.</li>
@@ -49,7 +53,10 @@ export default function ClientLoginPage() {
           </ul>
         </section>
         <section className="ops-card p-6 sm:p-8">
-          <p className="ops-section-title">Client Access</p>
+          <div className="mb-1">
+            <AxleLogo size="md" />
+          </div>
+          <p className="ops-section-title mt-2">Client Access</p>
           <h2 className="mt-2 text-2xl font-semibold">Sign in</h2>
           <p className="mt-2 text-sm text-muted-foreground">Use your client account credentials.</p>
           <form className="mt-6 space-y-4" onSubmit={handleSubmit}>

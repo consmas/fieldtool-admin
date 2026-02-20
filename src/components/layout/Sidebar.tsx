@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils/cn";
 import { fetchChatInbox } from "@/lib/api/chat";
 import { fetchNotificationsUnreadCount } from "@/lib/api/notifications";
 import { useAuthStore } from "@/stores/auth.store";
+import { AxleLogomark, AXLE_BRAND } from "@/components/branding/AxleLogo";
 
 type NavItem = {
   href: string;
@@ -56,7 +57,6 @@ const navItems: NavItem[] = [
   { href: "/compliance", label: "Compliance", icon: ClipboardCheck, section: "Finance" },
   { href: "/reports", label: "Reports", icon: FileText, section: "Finance" },
   { href: "/users", label: "Users", icon: Users, section: "Finance" },
-  { href: "/client-users", label: "Client Users", icon: Users, section: "Finance" },
 ];
 
 const dispatcherAllowed = new Set([
@@ -67,7 +67,6 @@ const dispatcherAllowed = new Set([
   "/destinations",
   "/fuel-prices",
   "/expenses",
-  "/client-users",
   "/trips",
 ]);
 
@@ -126,11 +125,11 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
     >
       <div className="border-b border-sidebar-border px-4 py-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
-            AX
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-amber-500/35 bg-[linear-gradient(140deg,#0A0E1A,#0F172A)] shadow-[0_0_0_1px_rgba(245,158,11,0.08)_inset]">
+            <AxleLogomark size={30} color={AXLE_BRAND.amberLight} />
           </div>
           <div>
-            <p className="text-sm font-semibold tracking-tight">Axle</p>
+            <p className="text-base font-semibold tracking-tight">AXLE</p>
             <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Operations Admin</p>
           </div>
         </div>

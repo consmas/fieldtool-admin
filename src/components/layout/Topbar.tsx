@@ -3,6 +3,7 @@
 import { Bell, Menu, Search } from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
 import ThemeToggle from "@/components/theme/ThemeToggle";
+import { AxleLogomark, AXLE_BRAND } from "@/components/branding/AxleLogo";
 
 export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const user = useAuthStore((state) => state.user);
@@ -11,7 +12,10 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
     <header className="sticky top-0 z-10 border-b border-border bg-background/85 px-3 py-3 backdrop-blur sm:px-4 md:px-6 md:py-4">
       <div className="flex flex-wrap items-center justify-between gap-3 md:gap-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Axle Command Center</p>
+          <div className="flex items-center gap-2">
+            <AxleLogomark size={18} color={AXLE_BRAND.amberLight} />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Axle Command Center</p>
+          </div>
           <h1 className="text-lg font-semibold tracking-tight text-foreground md:text-xl">Admin Dashboard</h1>
         </div>
 

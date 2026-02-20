@@ -6,6 +6,7 @@ import { ClientGuard } from "@/lib/auth/client-guard";
 import { useClientAuthStore } from "@/stores/client-auth.store";
 import { clientLogout } from "@/lib/api/client-portal";
 import { cn } from "@/lib/utils/cn";
+import { AxleLogo } from "@/components/branding/AxleLogo";
 
 const navItems = [
   { href: "/client/dashboard", label: "Dashboard" },
@@ -26,6 +27,7 @@ export default function ClientPortalLayout({ children }: { children: React.React
         <header className="border-b border-border bg-card/80 px-4 py-3 backdrop-blur sm:px-6">
           <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3">
             <div>
+              <AxleLogo size="md" />
               <p className="ops-section-title">Axle Client Portal</p>
               <h1 className="text-lg font-semibold">{(user?.company_name as string) ?? "Client Dashboard"}</h1>
             </div>

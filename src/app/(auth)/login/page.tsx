@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { login, extractToken } from "@/lib/api/auth";
 import { useAuthStore } from "@/stores/auth.store";
 import ThemeToggle from "@/components/theme/ThemeToggle";
+import { AxleWordmark, AxleLogomark, AXLE_BRAND } from "@/components/branding/AxleLogo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -49,15 +50,16 @@ export default function LoginPage() {
         <ThemeToggle />
       </div>
       <div className="grid min-h-screen lg:grid-cols-[1.1fr_0.9fr]">
-        <section className="relative hidden overflow-hidden border-r border-border bg-[radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.22),transparent_48%),radial-gradient(circle_at_80%_80%,rgba(14,165,233,0.18),transparent_42%)] lg:block">
+        <section className="relative hidden overflow-hidden border-r border-border bg-[radial-gradient(circle_at_20%_20%,rgba(245,158,11,0.22),transparent_48%),radial-gradient(circle_at_80%_80%,rgba(217,119,6,0.18),transparent_42%)] lg:block">
           <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(100,116,139,0.16)_1px,transparent_1px),linear-gradient(to_bottom,rgba(100,116,139,0.16)_1px,transparent_1px)] bg-[size:36px_36px]" />
           <div className="relative z-10 flex h-full flex-col justify-between p-10">
             <div>
               <div className="inline-flex items-center gap-3 rounded-lg border border-border bg-card/80 px-3 py-2 backdrop-blur">
-                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-xs font-bold text-primary-foreground">
-                  AX
+                <AxleLogomark size={30} color={AXLE_BRAND.amberLight} />
+                <div className="flex flex-col">
+                  <AxleWordmark height={18} />
+                  <p className="text-[11px] text-muted-foreground">Admin</p>
                 </div>
-                <p className="text-sm font-semibold tracking-tight">Axle Admin</p>
               </div>
               <h2 className="mt-8 max-w-md text-4xl font-semibold leading-tight tracking-tight">
                 Fleet operations visibility, approvals, and control in one place.
@@ -81,14 +83,12 @@ export default function LoginPage() {
         <section className="flex items-center justify-center px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
           <div className="w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-[0_18px_60px_rgba(0,0,0,0.35)] sm:p-8">
             <div className="mb-4 inline-flex items-center gap-2 rounded-lg border border-border bg-background px-2.5 py-1.5 lg:hidden">
-              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-[10px] font-bold text-primary-foreground">
-                AX
-              </div>
-              <p className="text-xs font-semibold tracking-tight">Axle Admin</p>
+              <AxleLogomark size={22} color={AXLE_BRAND.amberLight} />
+              <p className="text-sm font-semibold tracking-tight">AXLE Admin</p>
             </div>
             <div className="mb-6">
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-                Axle
+                AXLE
               </p>
               <h1 className="mt-2 text-2xl font-semibold tracking-tight">Sign in to Admin</h1>
               <p className="mt-2 text-sm text-muted-foreground">

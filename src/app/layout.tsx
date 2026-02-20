@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { ReactQueryProvider } from "@/lib/utils/react-query-provider";
 
 export const metadata: Metadata = {
-  title: "ConsMas FieldTool Admin",
-  description: "Admin dashboard for ConsMas FieldTool",
+  title: "Axle Admin",
+  description: "Axle fleet operations admin dashboard",
 };
 
 export default function RootLayout({
