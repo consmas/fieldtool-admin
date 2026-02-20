@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download } from "lucide-react";
 import { fetchTrips } from "@/lib/api/trips";
@@ -18,8 +19,9 @@ import {
   fetchReportsVehicles,
   type ReportFilters,
 } from "@/lib/api/reports";
+import { fetchAuditLogs } from "@/lib/api/compliance_incidents";
 
-type TabKey = "overview" | "trips" | "expenses" | "drivers" | "vehicles";
+type TabKey = "overview" | "trips" | "expenses" | "drivers" | "vehicles" | "audit";
 
 const tabs: Array<{ key: TabKey; label: string }> = [
   { key: "overview", label: "Overview" },
@@ -27,6 +29,7 @@ const tabs: Array<{ key: TabKey; label: string }> = [
   { key: "expenses", label: "Expenses" },
   { key: "drivers", label: "Drivers" },
   { key: "vehicles", label: "Vehicles" },
+  { key: "audit", label: "Audit Trail" },
 ];
 
 function toNumber(value: unknown) {
@@ -441,8 +444,10 @@ function SimpleTable({
 }
 
 export default function ReportsPage() {
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<TabKey>("overview");
+  const initialTab = (searchParams.get("tab") as TabKey) || "overview";
+  const [tab, setTab] = useState<TabKey>(tabs.some((t) => t.key === initialTab) ? initialTab : "overview");
   const [filterState, setFilterState] = useState({
     date_from: "",
     date_to: "",
@@ -451,6 +456,11 @@ export default function ReportsPage() {
     trip_id: "",
     vehicle_id: "",
     driver_id: "",
+  });
+  const [auditFilters, setAuditFilters] = useState({
+    actor: "",
+    entity_type: "",
+    action_type: "",
   });
 
   const filters = useMemo<ReportFilters>(
@@ -517,6 +527,19 @@ export default function ReportsPage() {
     queryFn: () => fetchReportsVehicles(filters),
     enabled: tab === "vehicles",
   });
+  const auditQuery = useQuery({
+    queryKey: ["reports", "audit", filters.date_from, filters.date_to, auditFilters],
+    queryFn: () =>
+      fetchAuditLogs({
+        date_from: filters.date_from,
+        date_to: filters.date_to,
+        actor: auditFilters.actor || undefined,
+        entity_type: auditFilters.entity_type || undefined,
+        action: auditFilters.action_type || undefined,
+        action_type: auditFilters.action_type || undefined,
+      }),
+    enabled: tab === "audit",
+  });
 
   const activeQuery =
     tab === "overview"
@@ -527,12 +550,56 @@ export default function ReportsPage() {
       ? expensesQuery
       : tab === "drivers"
       ? driversQuery
-      : vehiclesQuery;
+      : tab === "vehicles"
+      ? vehiclesQuery
+      : auditQuery;
 
-  const activeData = toRecord(activeQuery.data);
+  const activeData = toRecord(tab === "audit" ? auditQuery.data?.raw : activeQuery.data);
+  const auditItems = useMemo(
+    () => (auditQuery.data?.items ?? []).map((row) => toRecord(row)),
+    [auditQuery.data?.items]
+  );
+  const auditEntityTypeOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          auditItems
+            .map((row) => String(row.entity_type ?? "").trim())
+            .filter(Boolean)
+        )
+      ).sort((a, b) => a.localeCompare(b)),
+    [auditItems]
+  );
+  const auditActionOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          auditItems
+            .map((row) => String(row.action_type ?? row.action ?? "").trim())
+            .filter(Boolean)
+        )
+      ).sort((a, b) => a.localeCompare(b)),
+    [auditItems]
+  );
 
   const exportCurrentTab = () => {
     const filename = `reports-${tab}.csv`;
+
+    if (tab === "audit") {
+      downloadCsv(filename, [
+        ["timestamp", "actor", "entity_type", "entity_id", "action_type", "notes", "source"],
+        ...auditItems.map((row) => [
+          String(row.timestamp ?? row.created_at ?? ""),
+          String(row.actor ?? row.user_name ?? row.user_id ?? "system"),
+          String(row.entity_type ?? ""),
+          String(row.entity_id ?? ""),
+          String(row.action_type ?? row.action ?? ""),
+          String(row.notes ?? row.reason ?? ""),
+          String(row.source ?? ""),
+        ]),
+      ]);
+      return;
+    }
 
     if (tab === "overview") {
       const { totalTrips, completionRate, totalDistance, totalExpense, costPerKm } = getOverviewMetrics(activeData);
@@ -631,6 +698,20 @@ export default function ReportsPage() {
 
   const exportCurrentTabPdf = () => {
     const title = `Reports - ${tab}`;
+
+    if (tab === "audit") {
+      const rows = auditItems.map((row) => [
+        String(row.timestamp ?? row.created_at ?? ""),
+        String(row.actor ?? row.user_name ?? row.user_id ?? "system"),
+        String(row.entity_type ?? ""),
+        String(row.entity_id ?? ""),
+        String(row.action_type ?? row.action ?? ""),
+        String(row.notes ?? row.reason ?? ""),
+        String(row.source ?? ""),
+      ]);
+      exportPdfFromRows(title, ["Timestamp", "Actor", "Entity Type", "Entity ID", "Action", "Notes", "Source"], rows);
+      return;
+    }
 
     if (tab === "overview") {
       const { totalTrips, completionRate, totalDistance, totalExpense, costPerKm } = getOverviewMetrics(activeData);
@@ -1052,6 +1133,26 @@ export default function ReportsPage() {
     );
   };
 
+  const renderAudit = () => {
+    const rows = auditItems.map((row) => [
+      String(row.timestamp ?? row.created_at ?? "-"),
+      String(row.actor ?? row.user_name ?? row.user_id ?? "system"),
+      String(row.entity_type ?? "-"),
+      String(row.entity_id ?? "-"),
+      String(row.action_type ?? row.action ?? "-"),
+      String(row.notes ?? row.reason ?? "-"),
+      String(row.source ?? "-"),
+    ]);
+    if (rows.length === 0) return <EmptyState />;
+    return (
+      <SimpleTable
+        title="Audit Timeline"
+        columns={["Timestamp", "Actor", "Entity Type", "Entity ID", "Action", "Notes", "Source"]}
+        rows={rows}
+      />
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1170,6 +1271,48 @@ export default function ReportsPage() {
           </select>
         </div>
       </section>
+      {tab === "audit" ? (
+        <section className="ops-card p-4">
+          <div className="grid gap-3 md:grid-cols-3">
+            <select
+              value={auditFilters.actor}
+              onChange={(e) => setAuditFilters((p) => ({ ...p, actor: e.target.value }))}
+              className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition focus:border-primary"
+            >
+              <option value="">Actor (from users)</option>
+              {users.map((user) => (
+                <option key={user.id} value={String(user.id)}>
+                  {String(user.name ?? user.email ?? `User ${user.id}`)} ({user.id})
+                </option>
+              ))}
+            </select>
+            <select
+              value={auditFilters.entity_type}
+              onChange={(e) => setAuditFilters((p) => ({ ...p, entity_type: e.target.value }))}
+              className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition focus:border-primary"
+            >
+              <option value="">Entity Type (from logs)</option>
+              {auditEntityTypeOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+            <select
+              value={auditFilters.action_type}
+              onChange={(e) => setAuditFilters((p) => ({ ...p, action_type: e.target.value }))}
+              className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition focus:border-primary"
+            >
+              <option value="">Action Type (from logs)</option>
+              {auditActionOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+        </section>
+      ) : null}
 
       <section className="flex flex-wrap gap-2">
         {tabs.map((item) => {
@@ -1199,6 +1342,7 @@ export default function ReportsPage() {
           {tab === "expenses" ? renderExpenses() : null}
           {tab === "drivers" ? renderDrivers() : null}
           {tab === "vehicles" ? renderVehicles() : null}
+          {tab === "audit" ? renderAudit() : null}
         </>
       ) : null}
     </div>

@@ -18,6 +18,17 @@ const dispatcherAllowed = [
   /^\/logistics$/,
 ];
 
+const financeAllowed = [
+  /^\/dashboard$/,
+  /^\/reports$/,
+  /^\/expenses$/,
+  /^\/fuel-prices$/,
+  /^\/insurance$/,
+  /^\/incidents$/,
+  /^\/incidents\/\d+$/,
+  /^\/audit-trail$/,
+];
+
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -35,6 +46,9 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     if (role === "admin" || role === "supervisor") return true;
     if (role === "dispatcher") {
       return dispatcherAllowed.some((pattern) => pattern.test(pathname));
+    }
+    if (role === "finance") {
+      return financeAllowed.some((pattern) => pattern.test(pathname));
     }
     return false;
   }, [pathname, user?.role]);

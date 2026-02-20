@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchDrivers } from "@/lib/api/driver_intelligence";
@@ -132,6 +133,14 @@ export default function CompliancePage() {
         <p className="text-sm text-muted-foreground">Lifecycle management for driver documents, verification and expiry controls.</p>
       </div>
 
+      <section className="ops-card p-2">
+        <div className="flex flex-wrap gap-2">
+          <Link href="/compliance/requirements" className="rounded-lg border border-border px-3 py-2 text-sm">Requirements</Link>
+          <Link href="/compliance/violations" className="rounded-lg border border-border px-3 py-2 text-sm">Violations Center</Link>
+          <Link href="/compliance/drilldown" className="rounded-lg border border-border px-3 py-2 text-sm">Vehicle/Driver Drilldown</Link>
+        </div>
+      </section>
+
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <article className="ops-card p-4"><p className="ops-section-title">Active</p><p className="mt-2 text-2xl font-bold">{toNumber(summary.active_count ?? summary.active)}</p></article>
         <article className="ops-card p-4"><p className="ops-section-title">Expiring Soon</p><p className="mt-2 text-2xl font-bold">{toNumber(summary.expiring_count ?? summary.expiring_30_days)}</p></article>
@@ -144,9 +153,12 @@ export default function CompliancePage() {
         <div className="grid gap-3 md:grid-cols-4">
           <select value={form.driver_id} onChange={(e) => { setForm((p) => ({ ...p, driver_id: e.target.value })); setSelectedDriverId(e.target.value); }} className="rounded-lg border border-border bg-card px-3 py-2 text-sm">
             <option value="">Select driver</option>
-            {drivers.map((driver) => {
+            {drivers.map((driver, idx) => {
               const row = driver as Record<string, unknown>;
-              return <option key={String(row.id)} value={String(row.id)}>{String(row.name ?? row.email ?? `Driver ${row.id}`)}</option>;
+              const rawId = row.id ?? row.driver_id ?? row.user_id;
+              if (rawId == null) return null;
+              const id = String(rawId);
+              return <option key={`${id}-${idx}`} value={id}>{String(row.name ?? row.email ?? `Driver ${id}`)}</option>;
             })}
           </select>
           <input value={form.document_type} onChange={(e) => setForm((p) => ({ ...p, document_type: e.target.value }))} placeholder="Document type" className="rounded-lg border border-border bg-card px-3 py-2 text-sm" />

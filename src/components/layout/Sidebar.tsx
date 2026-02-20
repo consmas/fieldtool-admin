@@ -4,6 +4,7 @@ import { useEffect, useState, type ComponentType } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  AlertTriangle,
   BadgeCheck,
   Bell,
   ChartColumnIncreasing,
@@ -41,6 +42,7 @@ type SidebarProps = {
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: ChartColumnIncreasing, section: "Command" },
   { href: "/driver-intelligence", label: "Driver Intelligence", icon: BadgeCheck, section: "Command" },
+  { href: "/incidents", label: "Incidents", icon: AlertTriangle, section: "Command" },
   { href: "/logistics", label: "Logistics", icon: ClipboardCheck, section: "Command" },
   { href: "/notifications", label: "Notifications", icon: Bell, section: "Command" },
   { href: "/trips", label: "Trips", icon: Truck, section: "Operations" },
@@ -52,8 +54,6 @@ const navItems: NavItem[] = [
   { href: "/fuel-prices", label: "Fuel Prices", icon: Fuel, section: "Finance" },
   { href: "/expenses", label: "Expenses", icon: ReceiptText, section: "Finance" },
   { href: "/compliance", label: "Compliance", icon: ClipboardCheck, section: "Finance" },
-  { href: "/insurance", label: "Insurance", icon: FileText, section: "Finance" },
-  { href: "/audit-trail", label: "Audit Trail", icon: FileText, section: "Finance" },
   { href: "/reports", label: "Reports", icon: FileText, section: "Finance" },
   { href: "/users", label: "Users", icon: Users, section: "Finance" },
   { href: "/client-users", label: "Client Users", icon: Users, section: "Finance" },
@@ -69,6 +69,14 @@ const dispatcherAllowed = new Set([
   "/expenses",
   "/client-users",
   "/trips",
+]);
+
+const financeAllowed = new Set([
+  "/dashboard",
+  "/reports",
+  "/expenses",
+  "/fuel-prices",
+  "/incidents",
 ]);
 
 export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
@@ -102,6 +110,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
   const filteredNav = navItems.filter((item) => {
     if (role === "dispatcher") return dispatcherAllowed.has(item.href);
+    if (role === "finance") return financeAllowed.has(item.href);
     return true;
   });
 

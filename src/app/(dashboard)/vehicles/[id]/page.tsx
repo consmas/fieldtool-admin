@@ -553,7 +553,7 @@ export default function VehicleDetailPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <section className="ops-card p-4">
+        <section id="insurance" className="ops-card p-4">
           <h3 className="mb-3 text-sm font-semibold">Insurance</h3>
           <div className="space-y-1 text-sm">
             <p className="text-muted-foreground">Policy: <span className="text-foreground">{vehicle.insurance_policy_number ?? "-"}</span></p>

@@ -87,6 +87,12 @@ export default function VehiclesPage() {
                   >
                     Edit
                   </Link>
+                  <Link
+                    href={`/vehicles/${vehicle.id}#insurance`}
+                    className="rounded-lg border border-border px-3 py-2 text-center text-xs"
+                  >
+                    Insurance
+                  </Link>
                   <button
                     type="button"
                     className="rounded-lg border border-border px-3 py-2 text-xs text-rose-500"
@@ -147,6 +153,12 @@ export default function VehiclesPage() {
                             className="rounded-lg border border-border px-3 py-1 text-xs"
                           >
                             Edit
+                          </Link>
+                          <Link
+                            href={`/vehicles/${vehicle.id}#insurance`}
+                            className="rounded-lg border border-border px-3 py-1 text-xs"
+                          >
+                            Insurance
                           </Link>
                           <button
                             type="button"

@@ -7,6 +7,13 @@ import { AlertTriangle, ArrowUpRight, CheckCircle2, Clock3, Fuel, MapPin, Route,
 import { useQuery } from "@tanstack/react-query";
 import { fetchTrips } from "@/lib/api/trips";
 import { fetchMaintenanceReport } from "@/lib/api/maintenance";
+import {
+  fetchAuditLogs,
+  fetchAuditSummary,
+  fetchComplianceDashboard,
+  fetchIncidentDashboard,
+} from "@/lib/api/compliance_incidents";
+import { fetchDriversLeaderboard } from "@/lib/api/driver_intelligence";
 import type { Trip } from "@/types/api";
 import TripStatusBadge from "@/components/trips/TripStatusBadge";
 import { formatDate } from "@/lib/utils/format";
@@ -109,6 +116,31 @@ export default function OperationsDashboard() {
     queryFn: () => fetchMaintenanceReport(),
     refetchInterval: 60_000,
   });
+  const { data: complianceDashboard = {} } = useQuery({
+    queryKey: ["compliance", "overview-dashboard"],
+    queryFn: () => fetchComplianceDashboard(),
+    refetchInterval: 60_000,
+  });
+  const { data: incidentsDashboard = {} } = useQuery({
+    queryKey: ["incidents", "overview-dashboard"],
+    queryFn: () => fetchIncidentDashboard(),
+    refetchInterval: 60_000,
+  });
+  const { data: auditSummary = {} } = useQuery({
+    queryKey: ["audit", "summary-dashboard"],
+    queryFn: () => fetchAuditSummary(),
+    refetchInterval: 60_000,
+  });
+  const { data: criticalAuditLogs = { items: [] } } = useQuery({
+    queryKey: ["audit", "critical-logs-dashboard"],
+    queryFn: () => fetchAuditLogs({ severity: "critical", per_page: 8 }),
+    refetchInterval: 60_000,
+  });
+  const { data: driverLeaderboard = [] } = useQuery({
+    queryKey: ["drivers", "risk-dashboard"],
+    queryFn: () => fetchDriversLeaderboard(),
+    refetchInterval: 60_000,
+  });
 
   const summary = useMemo(() => {
     const activeStatuses = new Set(["assigned", "loaded", "en_route", "arrived", "offloaded", "in_progress", "in_transit", "delayed"]);
@@ -198,6 +230,37 @@ export default function OperationsDashboard() {
     };
   }, [maintenanceReport]);
 
+  const complianceSummary = useMemo(() => {
+    const c = complianceDashboard as Record<string, unknown>;
+    return {
+      complianceRate: Number(c.compliance_rate ?? c.fleet_compliance_rate ?? 0) || 0,
+      openViolations: Number(c.open_violations ?? 0) || 0,
+      criticalViolations: Number(c.critical_violations ?? 0) || 0,
+      activeWaivers: Number(c.active_waivers ?? 0) || 0,
+      expiringDocs30: Number(c.expiring_docs_30_days ?? c.expiring_documents_30_days ?? 0) || 0,
+    };
+  }, [complianceDashboard]);
+
+  const incidentSummary = useMemo(() => {
+    const i = incidentsDashboard as Record<string, unknown>;
+    return {
+      openIncidents: Number(i.open_incidents ?? 0) || 0,
+      pendingInvestigations: Number(i.pending_investigations ?? 0) || 0,
+      unresolvedClaims: Number(i.unresolved_claims ?? 0) || 0,
+    };
+  }, [incidentsDashboard]);
+
+  const driverRiskSummary = useMemo(() => {
+    const rows = (driverLeaderboard ?? []) as Array<Record<string, unknown>>;
+    const highRisk = rows.filter((r) => {
+      const safety = Number(r.safety_score ?? r.safety ?? 0) || 0;
+      const trend = Number(r.trend ?? 0) || 0;
+      return safety < 55 && trend < 0;
+    }).length;
+    const declining = rows.filter((r) => (Number(r.trend ?? 0) || 0) < 0).length;
+    return { highRisk, declining };
+  }, [driverLeaderboard]);
+
   return (
     <div className="space-y-4 md:space-y-6">
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -219,6 +282,60 @@ export default function OperationsDashboard() {
             <p className="text-lg font-semibold text-foreground">{maintenanceSummary.vehiclesInMaintenance}</p>
           </div>
         </Link>
+      </section>
+
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <Link href="/compliance" className="ops-card p-4 hover:bg-accent/30">
+          <p className="ops-section-title">Fleet Compliance Rate</p>
+          <p className="mt-2 text-2xl font-bold">{complianceSummary.complianceRate.toFixed(1)}%</p>
+        </Link>
+        <Link href="/compliance/violations" className="ops-card p-4 hover:bg-accent/30">
+          <p className="ops-section-title">Open Violations</p>
+          <p className="mt-2 text-2xl font-bold">{complianceSummary.openViolations}</p>
+        </Link>
+        <Link href="/incidents" className="ops-card p-4 hover:bg-accent/30">
+          <p className="ops-section-title">Open Incidents</p>
+          <p className="mt-2 text-2xl font-bold">{incidentSummary.openIncidents}</p>
+        </Link>
+        <Link href="/driver-intelligence/risk" className="ops-card p-4 hover:bg-accent/30">
+          <p className="ops-section-title">Declining Drivers</p>
+          <p className="mt-2 text-2xl font-bold">{driverRiskSummary.declining}</p>
+        </Link>
+        <Link href="/driver-intelligence/risk" className="ops-card p-4 hover:bg-accent/30">
+          <p className="ops-section-title">High Risk Drivers</p>
+          <p className="mt-2 text-2xl font-bold">{driverRiskSummary.highRisk}</p>
+        </Link>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-2">
+        <article className="ops-card p-4">
+          <h3 className="mb-2 text-sm font-semibold">Compliance / Incident Snapshot</h3>
+          <div className="grid gap-2 text-sm md:grid-cols-2">
+            <Link href="/compliance/violations" className="rounded border border-border p-2 hover:bg-accent/30">Critical violations: {complianceSummary.criticalViolations}</Link>
+            <Link href="/compliance/violations" className="rounded border border-border p-2 hover:bg-accent/30">Active waivers: {complianceSummary.activeWaivers}</Link>
+            <Link href="/compliance" className="rounded border border-border p-2 hover:bg-accent/30">Docs expiring 30d: {complianceSummary.expiringDocs30}</Link>
+            <Link href="/incidents" className="rounded border border-border p-2 hover:bg-accent/30">Pending investigations: {incidentSummary.pendingInvestigations}</Link>
+            <Link href="/incidents" className="rounded border border-border p-2 hover:bg-accent/30">Unresolved claims: {incidentSummary.unresolvedClaims}</Link>
+          </div>
+        </article>
+        <article className="ops-card p-4">
+          <h3 className="mb-2 text-sm font-semibold">Recent Critical Audit Events</h3>
+          {(criticalAuditLogs.items ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">No critical audit events.</p>
+          ) : (
+            <div className="space-y-2">
+              {(criticalAuditLogs.items ?? []).map((item, idx) => {
+                const row = item as Record<string, unknown>;
+                return (
+                  <Link key={idx} href="/audit-trail" className="block rounded border border-border p-2 hover:bg-accent/30">
+                    <p className="text-sm font-medium text-foreground">{String(row.action_type ?? row.action ?? "Audit Event")}</p>
+                    <p className="text-xs text-muted-foreground">{String(row.actor ?? row.user_name ?? "system")} · {String(row.created_at ?? row.timestamp ?? "-")}</p>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </article>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
