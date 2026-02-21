@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download } from "lucide-react";
@@ -1162,6 +1163,12 @@ export default function ReportsPage() {
           <p className="text-sm text-muted-foreground">Operational reporting powered by backend analytics endpoints.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link
+            href="/reports/monitoring"
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
+          >
+            Monitoring Workbook
+          </Link>
           <button
             type="button"
             onClick={exportCurrentTab}
