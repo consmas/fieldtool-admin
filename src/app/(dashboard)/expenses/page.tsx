@@ -20,6 +20,7 @@ import {
   rejectExpense,
   submitExpense,
   syncRoadFeeAutomation,
+  updateExpense,
   type ExpenseCategory,
   type ExpenseEntry,
   type ExpenseStatus,
@@ -60,10 +61,13 @@ function statusClasses(status?: string | null) {
 
 export default function ExpensesPage() {
   const queryClient = useQueryClient();
+  const [mode, setMode] = useState<"view" | "create">("view");
   const [category, setCategory] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [editingExpenseId, setEditingExpenseId] = useState<number | null>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [form, setForm] = useState({
     category: "other_overheads" as ExpenseCategory,
     amount: "",
@@ -116,7 +120,7 @@ export default function ExpensesPage() {
   };
 
   const createMutation = useMutation({
-    mutationFn: (payload: Partial<ExpenseEntry>) => createExpense(payload),
+    mutationFn: (payload: Partial<ExpenseEntry> | FormData) => createExpense(payload),
     onSuccess: async () => {
       setForm({
         category: "other_overheads",
@@ -127,6 +131,24 @@ export default function ExpensesPage() {
         driver_id: "",
         expense_date: "",
       });
+      setReceiptFile(null);
+      await refreshExpenses();
+    },
+  });
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: Partial<ExpenseEntry> | FormData }) => updateExpense(id, payload),
+    onSuccess: async () => {
+      setEditingExpenseId(null);
+      setForm({
+        category: "other_overheads",
+        amount: "",
+        description: "",
+        trip_id: "",
+        vehicle_id: "",
+        driver_id: "",
+        expense_date: "",
+      });
+      setReceiptFile(null);
       await refreshExpenses();
     },
   });
@@ -220,6 +242,20 @@ export default function ExpensesPage() {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
+            onClick={() => setMode("view")}
+            className={`rounded-lg border px-3 py-2 text-xs ${mode === "view" ? "border-primary/40 bg-primary/15 text-primary" : "border-border bg-card text-muted-foreground"}`}
+          >
+            View Expenses
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("create")}
+            className={`rounded-lg border px-3 py-2 text-xs ${mode === "create" ? "border-primary/40 bg-primary/15 text-primary" : "border-border bg-card text-muted-foreground"}`}
+          >
+            {editingExpenseId ? "Edit Expense" : "Create Expense"}
+          </button>
+          <button
+            type="button"
             onClick={() => roadFeeSyncMutation.mutate()}
             className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground hover:text-foreground"
             disabled={roadFeeSyncMutation.isPending}
@@ -239,6 +275,7 @@ export default function ExpensesPage() {
         </div>
       </div>
 
+      {mode === "view" ? (
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <article className="ops-card border-l-2 border-l-indigo-400 p-4">
           <p className="ops-section-title">Total Expense</p>
@@ -257,7 +294,9 @@ export default function ExpensesPage() {
           <p className="mt-2 text-2xl font-bold">{expenses.length}</p>
         </article>
       </section>
+      ) : null}
 
+      {mode === "view" ? (
       <section className="ops-card p-4">
         <div className="grid gap-3 md:grid-cols-[1.2fr_1fr_1fr]">
           <input
@@ -291,7 +330,9 @@ export default function ExpensesPage() {
           </select>
         </div>
       </section>
+      ) : null}
 
+      {mode === "create" ? (
       <section className="ops-card p-4">
         <div className="mb-3 flex items-center gap-2">
           <Plus className="h-4 w-4 text-primary" />
@@ -301,7 +342,7 @@ export default function ExpensesPage() {
           className="grid gap-3 md:grid-cols-3"
           onSubmit={(e) => {
             e.preventDefault();
-            createMutation.mutate({
+            const payload: Partial<ExpenseEntry> = {
               category: form.category,
               amount: Number(form.amount),
               description: form.description || undefined,
@@ -309,7 +350,23 @@ export default function ExpensesPage() {
               vehicle_id: form.vehicle_id ? Number(form.vehicle_id) : undefined,
               driver_id: form.driver_id ? Number(form.driver_id) : undefined,
               expense_date: form.expense_date || undefined,
+            };
+            const multipartKeys = new Set(["receipt", "receipt_file", "file"]);
+            const multipartPayload = new FormData();
+            Object.entries(payload).forEach(([key, value]) => {
+              if (value !== undefined && value !== null) multipartPayload.append(key, String(value));
             });
+            if (receiptFile) {
+              multipartKeys.forEach((key) => multipartPayload.append(key, receiptFile));
+            }
+            if (editingExpenseId) {
+              updateMutation.mutate({
+                id: editingExpenseId,
+                payload: receiptFile ? multipartPayload : payload,
+              });
+              return;
+            }
+            createMutation.mutate(receiptFile ? multipartPayload : payload);
           }}
         >
           <select
@@ -393,17 +450,54 @@ export default function ExpensesPage() {
             onChange={(e) => setForm((p) => ({ ...p, expense_date: e.target.value }))}
             className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition focus:border-primary md:col-span-2"
           />
+          <input
+            type="file"
+            accept="image/*,.pdf"
+            onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
+            className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition focus:border-primary md:col-span-2"
+          />
+          {receiptFile ? (
+            <p className="text-xs text-muted-foreground md:col-span-3">Receipt selected: {receiptFile.name}</p>
+          ) : null}
           <button
             type="submit"
             className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-            disabled={createMutation.isPending}
+            disabled={createMutation.isPending || updateMutation.isPending}
           >
-            {createMutation.isPending ? "Creating..." : "Create"}
+            {editingExpenseId
+              ? updateMutation.isPending
+                ? "Saving..."
+                : "Save Changes"
+              : createMutation.isPending
+              ? "Creating..."
+              : "Create"}
           </button>
+          {editingExpenseId ? (
+            <button
+              type="button"
+              onClick={() => {
+                setEditingExpenseId(null);
+                setForm({
+                  category: "other_overheads",
+                  amount: "",
+                  description: "",
+                  trip_id: "",
+                  vehicle_id: "",
+                  driver_id: "",
+                  expense_date: "",
+                });
+                setReceiptFile(null);
+              }}
+              className="rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground"
+            >
+              Cancel Edit
+            </button>
+          ) : null}
         </form>
       </section>
+      ) : null}
 
-      {selected.size > 0 ? (
+      {mode === "view" && selected.size > 0 ? (
         <section className="rounded-lg border border-primary/30 bg-primary/10 p-3">
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <span className="font-semibold text-primary">{selected.size} selected</span>
@@ -446,7 +540,7 @@ export default function ExpensesPage() {
         </section>
       ) : null}
 
-      {isLoading ? (
+      {mode === "view" ? (isLoading ? (
         <div className="ops-card p-6 text-sm text-muted-foreground">Loading expenses...</div>
       ) : isError ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-600">
@@ -490,10 +584,29 @@ export default function ExpensesPage() {
                       <span className="text-right text-foreground">{formatDate(row.expense_date ?? row.created_at ?? undefined)}</span>
                     </div>
                   </div>
-                  <div className="mt-3 grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => submitMutation.mutate(row.id)}
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingExpenseId(row.id);
+                          setMode("create");
+                          setForm({
+                            category: (row.category as ExpenseCategory) ?? "other_overheads",
+                            amount: String(asNumber(row.amount)),
+                            description: row.description ?? "",
+                            trip_id: row.trip_id ? String(row.trip_id) : "",
+                            vehicle_id: row.vehicle_id ? String(row.vehicle_id) : "",
+                            driver_id: row.driver_id ? String(row.driver_id) : "",
+                            expense_date: row.expense_date ? String(row.expense_date).slice(0, 16) : "",
+                          });
+                        }}
+                        className="rounded border border-border bg-card px-2 py-1 text-[11px] text-muted-foreground"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => submitMutation.mutate(row.id)}
                       className="rounded border border-border bg-card px-2 py-1 text-[11px] text-muted-foreground"
                     >
                       Submit
@@ -593,6 +706,25 @@ export default function ExpensesPage() {
                         <div className="flex justify-end gap-2">
                           <button
                             type="button"
+                            onClick={() => {
+                              setEditingExpenseId(row.id);
+                              setMode("create");
+                              setForm({
+                                category: (row.category as ExpenseCategory) ?? "other_overheads",
+                                amount: String(asNumber(row.amount)),
+                                description: row.description ?? "",
+                                trip_id: row.trip_id ? String(row.trip_id) : "",
+                                vehicle_id: row.vehicle_id ? String(row.vehicle_id) : "",
+                                driver_id: row.driver_id ? String(row.driver_id) : "",
+                                expense_date: row.expense_date ? String(row.expense_date).slice(0, 16) : "",
+                              });
+                            }}
+                            className="rounded border border-border bg-card px-2 py-1 text-xs text-muted-foreground"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => submitMutation.mutate(row.id)}
                             className="rounded border border-border bg-card px-2 py-1 text-xs text-muted-foreground"
                           >
@@ -641,8 +773,9 @@ export default function ExpensesPage() {
             </table>
           </div>
         </section>
-      )}
+      )) : null}
 
+      {mode === "view" ? (
       <section className="ops-card p-4">
         <h3 className="mb-3 text-sm font-semibold">Summary by Category</h3>
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -665,7 +798,9 @@ export default function ExpensesPage() {
           <p className="text-sm text-muted-foreground">No category summary returned yet.</p>
         ) : null}
       </section>
+      ) : null}
 
+      {mode === "view" ? (
       <section className="ops-card p-4">
         <h3 className="mb-3 text-sm font-semibold">Summary by Status</h3>
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
@@ -688,6 +823,7 @@ export default function ExpensesPage() {
           <p className="text-sm text-muted-foreground">No status summary returned yet.</p>
         ) : null}
       </section>
+      ) : null}
     </div>
   );
 }

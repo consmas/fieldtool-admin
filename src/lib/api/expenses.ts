@@ -87,12 +87,24 @@ export async function fetchExpenses(params: FetchExpensesParams): Promise<Expens
   return normalizeListPayload(data);
 }
 
-export async function createExpense(payload: Partial<ExpenseEntry>) {
+export async function createExpense(payload: Partial<ExpenseEntry> | FormData) {
+  if (payload instanceof FormData) {
+    const { data } = await apiClient.post("/expenses", payload, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data;
+  }
   const { data } = await apiClient.post("/expenses", payload);
   return data;
 }
 
-export async function updateExpense(id: number, payload: Partial<ExpenseEntry>) {
+export async function updateExpense(id: number, payload: Partial<ExpenseEntry> | FormData) {
+  if (payload instanceof FormData) {
+    const { data } = await apiClient.patch(`/expenses/${id}`, payload, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data;
+  }
   const { data } = await apiClient.patch(`/expenses/${id}`, payload);
   return data;
 }

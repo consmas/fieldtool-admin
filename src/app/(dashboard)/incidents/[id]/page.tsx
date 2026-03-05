@@ -3,17 +3,23 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { fetchIncident, updateIncidentStatus } from "@/lib/api/compliance_incidents";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetchIncident, updateIncidentStatus, uploadIncidentEvidence } from "@/lib/api/compliance_incidents";
 import { fetchAuditResourceHistory } from "@/lib/api/compliance_incidents";
 
 type TabKey = "summary" | "evidence" | "witnesses" | "activity" | "claims" | "audit";
 
 export default function IncidentDetailPage() {
+  const queryClient = useQueryClient();
   const params = useParams();
   const incidentId = String(params?.id ?? "");
   const [activeTab, setActiveTab] = useState<TabKey>("summary");
   const [nextStatus, setNextStatus] = useState("investigating");
+  const [evidenceTitle, setEvidenceTitle] = useState("");
+  const [evidenceDescription, setEvidenceDescription] = useState("");
+  const [evidenceType, setEvidenceType] = useState("evidence");
+  const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
+  const [evidenceUrl, setEvidenceUrl] = useState("");
 
   const incidentQuery = useQuery({
     queryKey: ["incidents", "detail", incidentId],
@@ -29,6 +35,28 @@ export default function IncidentDetailPage() {
 
   const statusMutation = useMutation({
     mutationFn: () => updateIncidentStatus(incidentId, { status: nextStatus }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["incidents", "detail", incidentId] });
+    },
+  });
+
+  const evidenceMutation = useMutation({
+    mutationFn: () =>
+      uploadIncidentEvidence(incidentId, {
+        file: evidenceFile ?? undefined,
+        file_url: evidenceUrl || undefined,
+        title: evidenceTitle || undefined,
+        description: evidenceDescription || undefined,
+        type: evidenceType || undefined,
+        category: evidenceType || undefined,
+      }),
+    onSuccess: async () => {
+      setEvidenceTitle("");
+      setEvidenceDescription("");
+      setEvidenceFile(null);
+      setEvidenceUrl("");
+      await queryClient.invalidateQueries({ queryKey: ["incidents", "detail", incidentId] });
+    },
   });
 
   const incident = useMemo(() => (incidentQuery.data ?? {}) as Record<string, unknown>, [incidentQuery.data]);
@@ -110,6 +138,52 @@ export default function IncidentDetailPage() {
           {activeTab === "evidence" ? (
             <section className="ops-card p-4">
               <h3 className="mb-2 text-sm font-semibold">Evidence</h3>
+              <div className="mb-4 grid gap-2 rounded border border-border p-3 md:grid-cols-5">
+                <input
+                  value={evidenceTitle}
+                  onChange={(e) => setEvidenceTitle(e.target.value)}
+                  placeholder="Title"
+                  className="rounded border border-border bg-card px-3 py-2 text-sm"
+                />
+                <input
+                  value={evidenceDescription}
+                  onChange={(e) => setEvidenceDescription(e.target.value)}
+                  placeholder="Description"
+                  className="rounded border border-border bg-card px-3 py-2 text-sm"
+                />
+                <select
+                  value={evidenceType}
+                  onChange={(e) => setEvidenceType(e.target.value)}
+                  className="rounded border border-border bg-card px-3 py-2 text-sm"
+                >
+                  <option value="evidence">Evidence</option>
+                  <option value="document">Document</option>
+                </select>
+                <input
+                  type="file"
+                  onChange={(e) => setEvidenceFile(e.target.files?.[0] ?? null)}
+                  className="rounded border border-border bg-card px-3 py-2 text-sm"
+                />
+                <input
+                  value={evidenceUrl}
+                  onChange={(e) => setEvidenceUrl(e.target.value)}
+                  placeholder="File URL (optional)"
+                  className="rounded border border-border bg-card px-3 py-2 text-sm"
+                />
+                <div className="md:col-span-5">
+                  <button
+                    type="button"
+                    onClick={() => evidenceMutation.mutate()}
+                    disabled={evidenceMutation.isPending || (!evidenceFile && !evidenceUrl)}
+                    className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+                  >
+                    {evidenceMutation.isPending ? "Uploading..." : "Upload Evidence / Document"}
+                  </button>
+                  {evidenceMutation.isError ? (
+                    <p className="mt-2 text-xs text-rose-300">Unable to upload. Confirm incident evidence endpoint availability.</p>
+                  ) : null}
+                </div>
+              </div>
               {Array.isArray(incident.evidence) && incident.evidence.length > 0 ? (
                 <div className="space-y-2">
                   {(incident.evidence as Array<Record<string, unknown>>).map((item, idx) => (

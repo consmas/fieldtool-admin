@@ -111,6 +111,44 @@ export async function updateIncidentStatus(id: number | string, payload: Unknown
   return asRecord(data);
 }
 
+export async function uploadIncidentEvidence(
+  incidentId: number | string,
+  payload: {
+    file?: File;
+    file_url?: string;
+    title?: string;
+    description?: string;
+    type?: string;
+    category?: string;
+  }
+) {
+  const formData = new FormData();
+  if (payload.file) formData.append("file", payload.file);
+  if (payload.file_url) formData.append("file_url", payload.file_url);
+  if (payload.title) formData.append("title", payload.title);
+  if (payload.description) formData.append("description", payload.description);
+  if (payload.type) formData.append("type", payload.type);
+  if (payload.category) formData.append("category", payload.category);
+
+  const endpoints = [
+    `/api/v1/incidents/${incidentId}/evidence`,
+    `/api/v1/incidents/${incidentId}/documents`,
+    `/api/v1/incidents/${incidentId}/files`,
+  ];
+  let lastError: unknown = null;
+  for (const endpoint of endpoints) {
+    try {
+      const { data } = await apiClient.post(endpoint, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return asRecord(data);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
+}
+
 export async function createInsuranceClaim(incidentId: number | string, payload: UnknownMap) {
   const { data } = await apiClient.post(`/api/v1/incidents/${incidentId}/insurance_claims`, payload);
   return asRecord(data);
