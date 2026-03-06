@@ -172,7 +172,24 @@ export async function syncRoadFeeAutomation() {
   return data;
 }
 
-export async function recalculateFuelExpenses(payload?: { trip_ids?: number[] }) {
-  const { data } = await apiClient.post("/expenses/fuel/recalculate", payload ?? {});
+export interface FuelRecalculationAutomationPayload {
+  date_from?: string;
+  date_to?: string;
+  target_statuses?: string[];
+  trip_ids?: number[];
+  price_per_liter?: number;
+}
+
+export async function recalculateFuelExpenses(payload?: FuelRecalculationAutomationPayload) {
+  const body = {
+    automation: {
+      date_from: payload?.date_from,
+      date_to: payload?.date_to,
+      target_statuses: payload?.target_statuses,
+      trip_ids: payload?.trip_ids,
+      price_per_liter: payload?.price_per_liter,
+    },
+  };
+  const { data } = await apiClient.post("/expenses/fuel/recalculate", body);
   return data;
 }

@@ -231,3 +231,27 @@ export async function fetchOmcLedger(
   const { data } = await apiClient.get("/api/v1/fuel/omc_ledger", { params: cleanParams(params) });
   return { raw: asRecord(data), items: unwrapList(data) as unknown as OmcLedgerEntry[] };
 }
+
+export interface FuelDepositReconcilePayload {
+  omc_name: OmcName;
+  month: string; // YYYY-MM
+  dry_run: boolean;
+  target_statuses?: string[];
+}
+
+export async function reconcileFuelDeposits(payload: FuelDepositReconcilePayload) {
+  const body = {
+    omc_name: payload.omc_name,
+    month: payload.month,
+    dry_run: payload.dry_run,
+    target_statuses: payload.target_statuses,
+    reconcile: {
+      omc_name: payload.omc_name,
+      month: payload.month,
+      dry_run: payload.dry_run,
+      target_statuses: payload.target_statuses,
+    },
+  };
+  const { data } = await apiClient.post("/api/v1/fuel/deposits/reconcile", body);
+  return asRecord(data);
+}

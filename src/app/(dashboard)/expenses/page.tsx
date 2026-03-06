@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bot, CheckCircle2, CircleDollarSign, Plus, RefreshCcw, XCircle } from "lucide-react";
 import { fetchTrips } from "@/lib/api/trips";
@@ -77,6 +77,13 @@ export default function ExpensesPage() {
     driver_id: "",
     expense_date: "",
   });
+  const [toast, setToast] = useState<{ kind: "success" | "error"; message: string } | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   const { data: trips = [] } = useQuery({
     queryKey: ["trips", "expense-form-lookup"],
@@ -202,8 +209,24 @@ export default function ExpensesPage() {
   });
 
   const fuelRecalcMutation = useMutation({
-    mutationFn: () => recalculateFuelExpenses(),
-    onSuccess: refreshExpenses,
+    mutationFn: () => recalculateFuelExpenses({ target_statuses: ["approved", "paid"] }),
+    onSuccess: async (data: unknown) => {
+      const payload = (data ?? {}) as Record<string, unknown>;
+      const nested = (payload.data ?? payload.job ?? {}) as Record<string, unknown>;
+      const jobId = payload.job_id ?? nested.job_id ?? nested.id ?? "-";
+      setToast({ kind: "success", message: `Recalculation queued (job_id: ${String(jobId)}).` });
+      await refreshExpenses();
+    },
+    onError: (error: unknown) => {
+      const message =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: { data?: { message?: string } } }).response?.data?.message === "string"
+          ? (error as { response: { data: { message: string } } }).response.data.message
+          : "Fuel recalculation request failed.";
+      setToast({ kind: "error", message });
+    },
   });
 
   const selectedIds = Array.from(selected);
@@ -231,6 +254,17 @@ export default function ExpensesPage() {
 
   return (
     <div className="space-y-6">
+      {toast ? (
+        <div
+          className={`fixed right-4 top-4 z-[70] rounded-lg border px-3 py-2 text-sm shadow-lg ${
+            toast.kind === "success"
+              ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-100"
+              : "border-rose-500/40 bg-rose-500/15 text-rose-100"
+          }`}
+        >
+          {toast.message}
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="ops-section-title">Finance</p>

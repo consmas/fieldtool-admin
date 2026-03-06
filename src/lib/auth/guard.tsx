@@ -15,6 +15,7 @@ const dispatcherAllowed = [
   /^\/destinations$/,
   /^\/destinations\/\d+$/,
   /^\/fuel-prices$/,
+  /^\/fuel-deposit-reconciliation$/,
   /^\/logistics$/,
 ];
 
@@ -23,6 +24,7 @@ const financeAllowed = [
   /^\/reports$/,
   /^\/expenses$/,
   /^\/fuel-prices$/,
+  /^\/fuel-deposit-reconciliation$/,
   /^\/insurance$/,
   /^\/incidents$/,
   /^\/incidents\/\d+$/,
