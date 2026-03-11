@@ -3,11 +3,14 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { AxiosError } from "axios";
 import {
   fetchBudgetWorkbook,
   fetchMonitoringRegime,
   fetchMonitoringWorkbook,
+  syncWorkbookData,
 } from "@/lib/api/reports";
+import { useAuthStore } from "@/stores/auth.store";
 
 type WorkbookTabKey =
   | "checklist"
@@ -39,21 +42,23 @@ function toRecord(v: unknown): Record<string, unknown> {
   return v as Record<string, unknown>;
 }
 
-function toRows(input: unknown): Array<Record<string, unknown>> {
-  if (Array.isArray(input)) return input as Array<Record<string, unknown>>;
+type TableRow = Record<string, unknown> | unknown[];
+
+function toRows(input: unknown): TableRow[] {
+  if (Array.isArray(input)) return input as TableRow[];
   const payload = toRecord(input);
-  if (Array.isArray(payload.rows)) return payload.rows as Array<Record<string, unknown>>;
-  if (Array.isArray(payload.items)) return payload.items as Array<Record<string, unknown>>;
-  if (Array.isArray(payload.data)) return payload.data as Array<Record<string, unknown>>;
+  if (Array.isArray(payload.rows)) return payload.rows as TableRow[];
+  if (Array.isArray(payload.items)) return payload.items as TableRow[];
+  if (Array.isArray(payload.data)) return payload.data as TableRow[];
   return [];
 }
 
-function toColumns(input: unknown, rows: Array<Record<string, unknown>>): string[] {
+function toColumns(input: unknown, rows: TableRow[]): string[] {
   const payload = toRecord(input);
   if (Array.isArray(payload.tab_headers)) return payload.tab_headers.map((col) => String(col));
   if (Array.isArray(payload.headers)) return payload.headers.map((col) => String(col));
   if (Array.isArray(payload.columns)) return payload.columns.map((col) => String(col));
-  if (rows.length > 0) return Object.keys(rows[0]);
+  if (rows.length > 0 && !Array.isArray(rows[0])) return Object.keys(rows[0]);
   return [];
 }
 
@@ -97,9 +102,9 @@ function openExportLink(url?: string) {
   return true;
 }
 
-function DataTable({ columns, rows }: { columns: string[]; rows: Array<Record<string, unknown>> }) {
+function DataTable({ columns, rows }: { columns: string[]; rows: TableRow[] }) {
   if (!rows.length) {
-    return <div className="ops-card p-4 text-sm text-muted-foreground">No rows available from backend.</div>;
+    return <div className="ops-card p-4 text-sm text-muted-foreground">No records for this month.</div>;
   }
 
   return (
@@ -118,8 +123,9 @@ function DataTable({ columns, rows }: { columns: string[]; rows: Array<Record<st
           <tbody>
             {rows.map((row, idx) => (
               <tr key={idx} className="border-t border-border/80">
-                {columns.map((column) => {
-                  const value = formatCell(row[column]);
+                {columns.map((column, colIdx) => {
+                  const rawValue = Array.isArray(row) ? row[colIdx] : row[column];
+                  const value = formatCell(rawValue);
                   return (
                     <td key={`${idx}-${column}`} className="px-3 py-2.5 text-muted-foreground">
                       {isAbsoluteUrl(value) ? (
@@ -146,6 +152,11 @@ export default function MonitoringReportsPage() {
   const [tab, setTab] = useState<WorkbookTabKey>("checklist");
   const [month, setMonth] = useState(now.toISOString().slice(0, 7));
   const [message, setMessage] = useState("");
+  const [toast, setToast] = useState<{ kind: "success" | "error"; text: string } | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncSummary, setSyncSummary] = useState<Record<string, unknown> | null>(null);
+  const userRole = useAuthStore((state) => state.user?.role ?? "");
+  const canSyncWorkbook = userRole === "admin" || userRole === "finance";
 
   const workbookQ = useQuery({
     queryKey: ["reports", "monitoring_workbook", month],
@@ -185,11 +196,11 @@ export default function MonitoringReportsPage() {
 
   const sheet = useMemo<{
     columns: string[];
-    rows: Array<Record<string, unknown>>;
+    rows: TableRow[];
     revenueColumns: string[];
-    revenueRows: Array<Record<string, unknown>>;
+    revenueRows: TableRow[];
     monthlyColumns: string[];
-    monthlyRows: Array<Record<string, unknown>>;
+    monthlyRows: TableRow[];
   }>(() => {
     if (tab === "checklist") {
       const regimeBody = regime.reporting ?? regime.tabs ?? regime.data ?? regime;
@@ -254,6 +265,30 @@ export default function MonitoringReportsPage() {
     setMessage(`${label} export opened in a new tab.`);
   };
 
+  const onSyncWorkbook = async () => {
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      setToast({ kind: "error", text: "Month must be in YYYY-MM format." });
+      return;
+    }
+    setSyncing(true);
+    try {
+      const summary = await syncWorkbookData(month);
+      setSyncSummary(summary);
+      setToast({ kind: "success", text: "Workbook sync completed" });
+      await Promise.all([workbookQ.refetch(), budgetQ.refetch(), regimeQ.refetch()]);
+    } catch (error) {
+      const maybeError = error as AxiosError<{ message?: string; error?: string; detail?: string }>;
+      const detail =
+        maybeError.response?.data?.detail ??
+        maybeError.response?.data?.message ??
+        maybeError.response?.data?.error ??
+        "Unable to sync workbook data.";
+      setToast({ kind: "error", text: detail });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -266,6 +301,17 @@ export default function MonitoringReportsPage() {
           <Link href="/reports" className="rounded-lg border border-border px-3 py-2 text-sm">
             Back to Analytics Reports
           </Link>
+          {canSyncWorkbook ? (
+            <button
+              type="button"
+              onClick={onSyncWorkbook}
+              disabled={syncing}
+              className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {syncing ? <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-muted-foreground/40 border-t-primary" /> : null}
+              {syncing ? "Syncing..." : "Sync Workbook Data"}
+            </button>
+          ) : null}
           <button
             type="button"
             className="rounded-lg border border-border px-3 py-2 text-sm"
@@ -308,6 +354,29 @@ export default function MonitoringReportsPage() {
       </section>
 
       {message ? <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">{message}</div> : null}
+      {toast ? (
+        <div
+          className={[
+            "rounded-lg border px-3 py-2 text-sm",
+            toast.kind === "success" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200" : "border-rose-500/30 bg-rose-500/10 text-rose-300",
+          ].join(" ")}
+        >
+          {toast.text}
+        </div>
+      ) : null}
+      {syncSummary ? (
+        <section className="ops-card p-4">
+          <p className="mb-2 text-sm font-semibold">Sync Summary</p>
+          <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2 lg:grid-cols-3">
+            <div>Trips Updated: <span className="text-foreground">{Number(syncSummary.trips_updated ?? 0)}</span></div>
+            <div>Road Expenses Synced: <span className="text-foreground">{Number(syncSummary.road_expenses_synced ?? 0)}</span></div>
+            <div>Fuel Logs Created: <span className="text-foreground">{Number(syncSummary.fuel_logs_created ?? 0)}</span></div>
+            <div>Driver Profiles Created: <span className="text-foreground">{Number(syncSummary.driver_profiles_created ?? 0)}</span></div>
+            <div>Driver Scores Created: <span className="text-foreground">{Number(syncSummary.driver_scores_created ?? 0)}</span></div>
+            <div>Errors: <span className="text-foreground">{Array.isArray(syncSummary.errors) ? syncSummary.errors.length : 0}</span></div>
+          </div>
+        </section>
+      ) : null}
 
       <section className="grid gap-3 sm:grid-cols-3">
         <div className="ops-card p-4">

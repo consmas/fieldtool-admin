@@ -158,3 +158,8 @@ export async function fetchBudgetWorkbook(month: string) {
   });
   return unwrap<Record<string, unknown>>(data);
 }
+
+export async function syncWorkbookData(month: string) {
+  const { data } = await apiClient.post("/api/v1/reports/workbook_sync", { month });
+  return unwrap<Record<string, unknown>>(data);
+}
