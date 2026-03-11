@@ -122,3 +122,39 @@ export async function markMonitoringSubmitted(payload: {
   }
   throw lastError;
 }
+
+export type WorkbookExportKind = "xlsx" | "csv";
+export type WorkbookEndpointKind = "monitoring_workbook" | "monitoring_regime" | "budget_workbook";
+
+export async function downloadWorkbookExport(params: {
+  endpoint: WorkbookEndpointKind;
+  month: string; // YYYY-MM
+  exportType: WorkbookExportKind;
+}) {
+  const { data, headers } = await apiClient.get(`/api/v1/reports/${params.endpoint}`, {
+    params: { month: params.month, export: params.exportType },
+    responseType: "blob",
+  });
+  return { blob: data as Blob, headers: headers as Record<string, string> };
+}
+
+export async function fetchMonitoringWorkbook(month: string) {
+  const { data } = await apiClient.get("/api/v1/reports/monitoring_workbook", {
+    params: { month },
+  });
+  return unwrap<Record<string, unknown>>(data);
+}
+
+export async function fetchMonitoringRegime(month: string) {
+  const { data } = await apiClient.get("/api/v1/reports/monitoring_regime", {
+    params: { month },
+  });
+  return unwrap<Record<string, unknown>>(data);
+}
+
+export async function fetchBudgetWorkbook(month: string) {
+  const { data } = await apiClient.get("/api/v1/reports/budget_workbook", {
+    params: { month },
+  });
+  return unwrap<Record<string, unknown>>(data);
+}

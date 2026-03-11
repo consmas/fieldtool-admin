@@ -65,6 +65,11 @@ function getApiErrorMessage(error: unknown, fallback: string) {
     if (typeof message === "string" && message.trim()) return message;
     const errors = responseData?.errors;
     if (Array.isArray(errors) && errors.length > 0) return String(errors[0]);
+    if (errors && typeof errors === "object") {
+      const first = Object.entries(errors as Record<string, unknown>)[0]?.[1];
+      if (Array.isArray(first) && first.length > 0) return String(first[0]);
+      if (typeof first === "string" && first.trim()) return first;
+    }
   }
   if (error instanceof Error && error.message) return error.message;
   return fallback;
@@ -245,23 +250,42 @@ export default function FuelHubPage() {
 
   const saveDepositMutation = useMutation({
     mutationFn: async () => {
+      const shouldConfirm = depositForm.status === "confirmed";
+      const createStatus = shouldConfirm ? "draft" : depositForm.status;
       const formData = new FormData();
-      formData.append("fuel_deposit[omc_name]", depositForm.omc_name);
-      formData.append("fuel_deposit[amount]", String(toNumber(depositForm.amount)));
-      formData.append("fuel_deposit[currency]", depositForm.currency || "GHS");
-      if (depositForm.deposit_date) formData.append("fuel_deposit[deposit_date]", depositForm.deposit_date);
-      if (depositForm.payment_method) formData.append("fuel_deposit[payment_method]", depositForm.payment_method);
-      if (depositForm.reference_no) formData.append("fuel_deposit[reference_no]", depositForm.reference_no);
-      if (depositForm.status) formData.append("fuel_deposit[status]", depositForm.status);
-      if (depositForm.notes) formData.append("fuel_deposit[notes]", depositForm.notes);
-      if (depositReceipt) formData.append("fuel_deposit[receipt]", depositReceipt);
-      if (depositForm.id) {
-        return updateFuelDeposit(Number(depositForm.id), formData);
+      const appendPair = (key: string, value: string) => {
+        formData.append(`fuel_deposit[${key}]`, value);
+        formData.append(key, value);
+      };
+      appendPair("omc_name", depositForm.omc_name);
+      appendPair("amount", String(toNumber(depositForm.amount)));
+      appendPair("currency", depositForm.currency || "GHS");
+      if (depositForm.deposit_date) appendPair("deposit_date", depositForm.deposit_date);
+      if (depositForm.payment_method) appendPair("payment_method", depositForm.payment_method);
+      if (depositForm.reference_no) appendPair("reference_no", depositForm.reference_no);
+      if (createStatus) appendPair("status", createStatus);
+      if (depositForm.notes) appendPair("notes", depositForm.notes);
+      if (depositReceipt) {
+        formData.append("fuel_deposit[receipt]", depositReceipt);
+        formData.append("receipt", depositReceipt);
       }
-      return createFuelDeposit(formData);
+      if (depositForm.id) {
+        const updated = await updateFuelDeposit(Number(depositForm.id), formData);
+        const updateId = Number((updated as FuelDeposit)?.id ?? depositForm.id);
+        if (shouldConfirm && Number.isFinite(updateId)) {
+          await confirmFuelDeposit(updateId);
+        }
+        return updated;
+      }
+      const created = await createFuelDeposit(formData);
+      const createdId = Number((created as FuelDeposit)?.id);
+      if (shouldConfirm && Number.isFinite(createdId)) {
+        await confirmFuelDeposit(createdId);
+      }
+      return created;
     },
     onSuccess: async () => {
-      setDepositMessage("Deposit saved.");
+      setDepositMessage(depositForm.status === "confirmed" ? "Deposit saved and confirmed." : "Deposit saved.");
       setDepositForm({
         id: "",
         omc_name: "westport",
