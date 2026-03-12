@@ -52,8 +52,7 @@ const navItems: NavItem[] = [
   { href: "/maintenance", label: "Maintenance", icon: Wrench, section: "Operations" },
   { href: "/destinations", label: "Destinations", icon: MapPin, section: "Operations" },
   { href: "/vehicles", label: "Vehicles", icon: Waypoints, section: "Operations" },
-  { href: "/fuel-prices", label: "Fuel Prices", icon: Fuel, section: "Finance" },
-  { href: "/fuel-deposit-reconciliation", label: "Fuel Reconciliation", icon: Fuel, section: "Finance" },
+  { href: "/fuel-prices", label: "Fuel Management", icon: Fuel, section: "Finance" },
   { href: "/expenses", label: "Expenses", icon: ReceiptText, section: "Finance" },
   { href: "/compliance", label: "Compliance", icon: ClipboardCheck, section: "Finance" },
   { href: "/reports", label: "Reports", icon: FileText, section: "Finance" },
@@ -67,7 +66,6 @@ const dispatcherAllowed = new Set([
   "/notifications",
   "/destinations",
   "/fuel-prices",
-  "/fuel-deposit-reconciliation",
   "/expenses",
   "/trips",
 ]);
@@ -77,7 +75,6 @@ const financeAllowed = new Set([
   "/reports",
   "/expenses",
   "/fuel-prices",
-  "/fuel-deposit-reconciliation",
   "/incidents",
 ]);
 

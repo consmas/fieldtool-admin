@@ -213,6 +213,11 @@ export async function confirmFuelDeposit(id: number | string) {
   return unwrapObject(data) as unknown as FuelDeposit;
 }
 
+export async function deleteFuelDeposit(id: number | string) {
+  const { data } = await apiClient.delete(`/api/v1/fuel/deposits/${id}`);
+  return unwrapObject(data) as unknown as FuelDeposit;
+}
+
 export async function fetchOmcBalances() {
   const { data } = await apiClient.get("/api/v1/fuel/omc_balances");
   return { raw: asRecord(data), items: unwrapList(data) as unknown as OmcBalance[] };

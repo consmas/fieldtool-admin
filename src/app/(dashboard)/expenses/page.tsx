@@ -64,6 +64,7 @@ export default function ExpensesPage() {
   const [mode, setMode] = useState<"view" | "create">("view");
   const [category, setCategory] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
+  const [month, setMonth] = useState<string>("");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [editingExpenseId, setEditingExpenseId] = useState<number | null>(null);
@@ -99,12 +100,16 @@ export default function ExpensesPage() {
   });
 
   const { data: expensesResult, isLoading, isError } = useQuery({
-    queryKey: ["expenses", { category, status, search }],
+    queryKey: ["expenses", { category, status, search, month }],
     queryFn: () =>
       fetchExpenses({
         category: category !== "all" ? category : undefined,
         status: status !== "all" ? status : undefined,
         q: search || undefined,
+        date_from: month ? `${month}-01` : undefined,
+        date_to: month
+          ? `${month}-${String(new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate()).padStart(2, "0")}`
+          : undefined,
       }),
     refetchInterval: 20_000,
   });
@@ -112,12 +117,16 @@ export default function ExpensesPage() {
   const expenses = useMemo(() => expensesResult?.items ?? [], [expensesResult?.items]);
 
   const { data: summary = {} } = useQuery({
-    queryKey: ["expenses", "summary", { category, status, search }],
+    queryKey: ["expenses", "summary", { category, status, search, month }],
     queryFn: () =>
       fetchExpenseSummary({
         category: category !== "all" ? category : undefined,
         status: status !== "all" ? status : undefined,
         q: search || undefined,
+        date_from: month ? `${month}-01` : undefined,
+        date_to: month
+          ? `${month}-${String(new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate()).padStart(2, "0")}`
+          : undefined,
       }),
     refetchInterval: 20_000,
   });
@@ -332,7 +341,7 @@ export default function ExpensesPage() {
 
       {mode === "view" ? (
       <section className="ops-card p-4">
-        <div className="grid gap-3 md:grid-cols-[1.2fr_1fr_1fr]">
+        <div className="grid gap-3 md:grid-cols-[1.2fr_1fr_1fr_0.9fr]">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -362,6 +371,13 @@ export default function ExpensesPage() {
               </option>
             ))}
           </select>
+          <input
+            type="month"
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition focus:border-primary"
+            aria-label="Filter expenses by month"
+          />
         </div>
       </section>
       ) : null}

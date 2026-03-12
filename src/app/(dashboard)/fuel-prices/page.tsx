@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { fetchFuelPrices } from "@/lib/api/fuel_prices";
@@ -13,6 +13,7 @@ import {
   createFuelDeposit,
   createTripFuelLogWithFunding,
   createVehicleFuelLogWithFunding,
+  deleteFuelDeposit,
   fetchFuelDeposits,
   fetchDriverFuelTrend,
   fetchFuelAnalysis,
@@ -128,6 +129,13 @@ export default function FuelHubPage() {
   });
   const [depositReceipt, setDepositReceipt] = useState<File | null>(null);
   const [depositMessage, setDepositMessage] = useState<string>("");
+  const [toast, setToast] = useState<{ kind: "success" | "error"; message: string } | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 3500);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   const tabs: Array<{ key: TabKey; label: string }> = [
     { key: "prices", label: "Fuel Prices" },
@@ -316,6 +324,26 @@ export default function FuelHubPage() {
     onError: (error) => setDepositMessage(getApiErrorMessage(error, "Unable to confirm deposit.")),
   });
 
+  const deleteDepositMutation = useMutation({
+    mutationFn: (id: number | string) => deleteFuelDeposit(id),
+    onSuccess: async () => {
+      setDepositMessage("Deposit deleted.");
+      setToast({ kind: "success", message: "Deposit deleted" });
+      await queryClient.invalidateQueries({ queryKey: ["fuel", "deposits"] });
+      await queryClient.invalidateQueries({ queryKey: ["fuel", "omc_balances"] });
+      await queryClient.invalidateQueries({ queryKey: ["fuel", "omc_ledger"] });
+    },
+    onError: (error) => {
+      const maybeError = error as AxiosError;
+      const message =
+        maybeError.response?.status === 422
+          ? getApiErrorMessage(error, "Unable to reverse confirmed deposit.")
+          : "Unable to delete deposit.";
+      setDepositMessage(message);
+      setToast({ kind: "error", message });
+    },
+  });
+
   const investigateMutation = useMutation({
     mutationFn: ({ id, note }: { id: string | number; note: string }) =>
       investigateFuelAnalysis(id, { status: "investigating", resolution_note: note || undefined }),
@@ -350,15 +378,31 @@ export default function FuelHubPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
+      {toast ? (
+        <div
+          className={`fixed right-4 top-4 z-[70] rounded-lg border px-3 py-2 text-sm shadow-lg ${
+            toast.kind === "success"
+              ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-100"
+              : "border-rose-500/40 bg-rose-500/15 text-rose-100"
+          }`}
+        >
+          {toast.message}
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-widest text-muted-foreground">Fuel</p>
-          <h2 className="text-lg font-semibold md:text-xl">Fuel Prices & Analytics Hub</h2>
+          <h2 className="text-lg font-semibold md:text-xl">Fuel Management</h2>
           <p className="text-sm text-muted-foreground">Fuel prices, logs, anomalies, trends and period history in one place.</p>
         </div>
-        <Link href="/fuel-prices/new" className="w-full rounded-xl bg-primary px-4 py-2 text-center text-sm font-semibold text-primary-foreground sm:w-auto">
-          Add Fuel Price
-        </Link>
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+          <Link href="/fuel-deposit-reconciliation" className="w-full rounded-xl border border-border px-4 py-2 text-center text-sm font-semibold sm:w-auto">
+            Fuel Reconciliation
+          </Link>
+          <Link href="/fuel-prices/new" className="w-full rounded-xl bg-primary px-4 py-2 text-center text-sm font-semibold text-primary-foreground sm:w-auto">
+            Add Fuel Price
+          </Link>
+        </div>
       </div>
 
       <div className="ops-card p-2">
@@ -476,13 +520,14 @@ export default function FuelHubPage() {
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[820px] text-sm">
                   <thead className="text-left text-xs uppercase tracking-widest text-muted-foreground">
-                    <tr><th className="py-2">Date</th><th className="py-2">Vehicle</th><th className="py-2">Trip</th><th className="py-2">Funding</th><th className="py-2">OMC</th><th className="py-2">Liters</th><th className="py-2">Price/L</th><th className="py-2">Cost</th></tr>
+                    <tr><th className="py-2">Date</th><th className="py-2">Vehicle</th><th className="py-2">Trip</th><th className="py-2">Recorded By</th><th className="py-2">Funding</th><th className="py-2">OMC</th><th className="py-2">Liters</th><th className="py-2">Price/L</th><th className="py-2">Cost</th></tr>
                   </thead>
                   <tbody>{logs.map((r, i) => (
                     <tr key={String(r.id ?? i)} className="border-t border-border">
                       <td className="py-2 text-muted-foreground">{formatDateTime(String(r.transaction_date ?? r.created_at ?? "-"))}</td>
                       <td className="py-2 text-muted-foreground">{String(r.vehicle_name ?? r.vehicle_id ?? "-")}</td>
                       <td className="py-2 text-muted-foreground">{String(r.trip_id ?? "-")}</td>
+                      <td className="py-2 text-muted-foreground">{String(r.recorded_by_name ?? r.recorded_by_id ?? "-")}</td>
                       <td className="py-2 text-muted-foreground">{String(r.funding_source ?? "-")}</td>
                       <td className="py-2 text-muted-foreground">{String(r.omc_name ?? "-")}</td>
                       <td className="py-2 text-muted-foreground">{toNumber(r.liters).toFixed(2)}</td>
@@ -632,7 +677,7 @@ export default function FuelHubPage() {
                     {deposits.map((row) => {
                       const status = String(row.status ?? "draft").toLowerCase();
                       const canConfirm = status === "draft";
-                      const canEdit = status === "draft";
+                      const canEdit = Boolean(row.id);
                       return (
                         <tr key={row.id} className="border-t border-border">
                           <td className="py-2 text-muted-foreground">{String(row.omc_name ?? "-")}</td>
@@ -687,6 +732,19 @@ export default function FuelHubPage() {
                                 className="rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 Confirm
+                              </button>
+                              <button
+                                type="button"
+                                disabled={deleteDepositMutation.isPending || !row.id}
+                                onClick={() => {
+                                  if (!row.id) return;
+                                  const shouldDelete = window.confirm("Delete this deposit log?");
+                                  if (!shouldDelete) return;
+                                  deleteDepositMutation.mutate(row.id);
+                                }}
+                                className="rounded border border-rose-500/40 bg-rose-500/10 px-2 py-1 text-xs text-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                Delete
                               </button>
                             </div>
                           </td>

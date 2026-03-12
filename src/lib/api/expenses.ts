@@ -63,6 +63,8 @@ export interface FetchExpensesParams {
   category?: string;
   status?: string;
   q?: string;
+  date_from?: string;
+  date_to?: string;
   trip_id?: number;
   vehicle_id?: number;
   driver_id?: number;
