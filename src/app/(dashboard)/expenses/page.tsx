@@ -9,6 +9,7 @@ import { fetchVehicles } from "@/lib/api/vehicles";
 import {
   approveExpense,
   bulkApproveExpenses,
+  bulkDeleteExpenses,
   bulkMarkPaidExpenses,
   bulkRejectExpenses,
   createExpense,
@@ -90,6 +91,14 @@ export default function ExpensesPage() {
     queryKey: ["trips", "expense-form-lookup"],
     queryFn: fetchTrips,
   });
+  const tripWaybillMap = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const t of trips) {
+      const wb = t.waybill_number ?? t.reference_code ?? null;
+      if (t.id && wb) map.set(Number(t.id), wb);
+    }
+    return map;
+  }, [trips]);
   const { data: users = [] } = useQuery({
     queryKey: ["users", "expense-form-lookup"],
     queryFn: fetchUsers,
@@ -206,6 +215,13 @@ export default function ExpensesPage() {
   });
   const bulkPaidMutation = useMutation({
     mutationFn: (ids: number[]) => bulkMarkPaidExpenses(ids),
+    onSuccess: async () => {
+      setSelected(new Set());
+      await refreshExpenses();
+    },
+  });
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids: number[]) => bulkDeleteExpenses(ids),
     onSuccess: async () => {
       setSelected(new Set());
       await refreshExpenses();
@@ -581,6 +597,17 @@ export default function ExpensesPage() {
             </button>
             <button
               type="button"
+              onClick={() => {
+                if (!window.confirm(`Delete ${selected.size} selected expense${selected.size === 1 ? "" : "s"}? This cannot be undone.`)) return;
+                bulkDeleteMutation.mutate(selectedIds);
+              }}
+              className="inline-flex items-center gap-1 rounded border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-xs text-rose-300"
+              disabled={bulkDeleteMutation.isPending}
+            >
+              {bulkDeleteMutation.isPending ? "Deleting..." : "Delete"}
+            </button>
+            <button
+              type="button"
               onClick={() => setSelected(new Set())}
               className="ml-auto rounded border border-border px-2 py-1 text-xs text-muted-foreground"
             >
@@ -626,7 +653,7 @@ export default function ExpensesPage() {
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-muted-foreground">Trip / Vehicle / Driver</span>
                       <span className="text-right text-foreground">
-                        {row.trip_id ?? "-"} / {row.vehicle_id ?? "-"} / {row.driver_id ?? "-"}
+                        {row.trip_id ?? "-"}{row.trip_id && tripWaybillMap.get(Number(row.trip_id)) ? ` (${tripWaybillMap.get(Number(row.trip_id))})` : ""} / {row.vehicle_id ?? "-"} / {row.driver_id ?? "-"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
@@ -742,7 +769,7 @@ export default function ExpensesPage() {
                         {formatCurrency(asNumber(row.amount), row.currency ?? "GHS")}
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">
-                        <p>Trip: {row.trip_id ?? "-"}</p>
+                        <p>Trip: {row.trip_id ?? "-"}{row.trip_id && tripWaybillMap.get(Number(row.trip_id)) ? <span className="ml-1 font-mono text-foreground">({tripWaybillMap.get(Number(row.trip_id))})</span> : null}</p>
                         <p>Vehicle: {row.vehicle_id ?? "-"}</p>
                         <p>Driver: {row.driver_id ?? "-"}</p>
                       </td>

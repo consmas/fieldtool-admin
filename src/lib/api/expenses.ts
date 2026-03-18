@@ -161,6 +161,15 @@ export async function bulkMarkPaidExpenses(ids: number[]) {
   return runBulkAction("/expenses/bulk/mark-paid", ids);
 }
 
+export async function bulkDeleteExpenses(ids: number[]) {
+  try {
+    return await runBulkAction("/expenses/bulk/delete", ids);
+  } catch {
+    // Fallback: delete individually if bulk endpoint doesn't exist
+    await Promise.all(ids.map((id) => apiClient.delete(`/expenses/${id}`)));
+  }
+}
+
 export async function fetchExpenseSummary(params?: Omit<FetchExpensesParams, "page" | "per_page">): Promise<ExpenseSummary> {
   const { data } = await apiClient.get("/expenses/summary", { params });
   if (data && typeof data === "object" && "data" in (data as Record<string, unknown>)) {
