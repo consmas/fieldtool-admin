@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { fetchVehicle, updateVehicle } from "@/lib/api/vehicles";
 import type { Vehicle } from "@/types/api";
 
@@ -21,11 +21,11 @@ export default function EditVehiclePage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (payload: Partial<Vehicle>) => updateVehicle(vehicleId, payload),
+    mutationFn: (payload: Partial<Vehicle> | FormData) => updateVehicle(vehicleId, payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["vehicles"] });
       await queryClient.invalidateQueries({ queryKey: ["vehicles", "detail", vehicleId] });
-      router.push("/vehicles");
+      router.push(`/vehicles/${vehicleId}`);
     },
     onError: () => setMessage("Unable to update vehicle."),
   });
@@ -42,9 +42,14 @@ export default function EditVehiclePage() {
           <p className="text-xs uppercase tracking-widest text-muted-foreground">Vehicles</p>
           <h2 className="text-lg font-semibold md:text-xl">Edit Vehicle</h2>
         </div>
-        <Link href="/vehicles" className="rounded-xl border border-border px-4 py-2 text-sm font-semibold">
-          Back to Vehicles
-        </Link>
+        <div className="flex gap-2">
+          <Link href={`/vehicles/${vehicleId}/insurance`} className="rounded-xl border border-border px-4 py-2 text-sm font-semibold">
+            Insurance
+          </Link>
+          <Link href={`/vehicles/${vehicleId}`} className="rounded-xl border border-border px-4 py-2 text-sm font-semibold">
+            Back to Vehicle
+          </Link>
+        </div>
       </div>
 
       <form
@@ -52,22 +57,24 @@ export default function EditVehiclePage() {
           event.preventDefault();
           setMessage(null);
           const fd = new FormData(event.currentTarget);
-          updateMutation.mutate({
-            name: String(fd.get("name") ?? ""),
-            kind: String(fd.get("kind") ?? "truck"),
-            license_plate: String(fd.get("license_plate") ?? "") || undefined,
-            truck_type_capacity: String(fd.get("truck_type_capacity") ?? "") || undefined,
-            vin: String(fd.get("vin") ?? "") || undefined,
-            notes: String(fd.get("notes") ?? "") || undefined,
-            insurance_policy_number: String(fd.get("insurance_policy_number") ?? "") || undefined,
-            insurance_provider: String(fd.get("insurance_provider") ?? "") || undefined,
-            insurance_issued_at: String(fd.get("insurance_issued_at") ?? "") || undefined,
-            insurance_expires_at: String(fd.get("insurance_expires_at") ?? "") || undefined,
-            insurance_coverage_amount: String(fd.get("insurance_coverage_amount") ?? "") || undefined,
-            insurance_notes: String(fd.get("insurance_notes") ?? "") || undefined,
-            insurance_document_url: String(fd.get("insurance_document_url") ?? "") || undefined,
-            active: String(fd.get("active") ?? "true") === "true",
-          });
+          const payload = new FormData();
+          const appendField = (key: string, value: FormDataEntryValue | null) => {
+            if (value === null || value === undefined) return;
+            const asText = typeof value === "string" ? value.trim() : value;
+            if (typeof asText === "string" && !asText) return;
+            payload.append(key, asText);
+            payload.append(`vehicle[${key}]`, asText);
+          };
+
+          appendField("name", fd.get("name"));
+          appendField("kind", fd.get("kind"));
+          appendField("license_plate", fd.get("license_plate"));
+          appendField("truck_type_capacity", fd.get("truck_type_capacity"));
+          appendField("vin", fd.get("vin"));
+          appendField("notes", fd.get("notes"));
+          appendField("active", fd.get("active"));
+
+          updateMutation.mutate(payload);
         }}
         className="ops-card p-4 sm:p-6"
       >
@@ -96,30 +103,6 @@ export default function EditVehiclePage() {
             <input name="vin" defaultValue={vehicle.vin ?? ""} className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm" />
           </div>
           <div>
-            <label className="text-xs uppercase tracking-widest text-muted-foreground">Insurance Policy Number</label>
-            <input name="insurance_policy_number" defaultValue={vehicle.insurance_policy_number ?? ""} className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm" />
-          </div>
-          <div>
-            <label className="text-xs uppercase tracking-widest text-muted-foreground">Insurance Provider</label>
-            <input name="insurance_provider" defaultValue={vehicle.insurance_provider ?? ""} className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm" />
-          </div>
-          <div>
-            <label className="text-xs uppercase tracking-widest text-muted-foreground">Insurance Issued At</label>
-            <input type="date" name="insurance_issued_at" defaultValue={vehicle.insurance_issued_at ?? ""} className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm" />
-          </div>
-          <div>
-            <label className="text-xs uppercase tracking-widest text-muted-foreground">Insurance Expires At</label>
-            <input type="date" name="insurance_expires_at" defaultValue={vehicle.insurance_expires_at ?? ""} className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm" />
-          </div>
-          <div>
-            <label className="text-xs uppercase tracking-widest text-muted-foreground">Insurance Coverage Amount</label>
-            <input name="insurance_coverage_amount" defaultValue={String(vehicle.insurance_coverage_amount ?? "")} className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm" />
-          </div>
-          <div>
-            <label className="text-xs uppercase tracking-widest text-muted-foreground">Insurance Document URL</label>
-            <input name="insurance_document_url" defaultValue={vehicle.insurance?.document_url ?? vehicle.insurance_document_url ?? ""} className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm" />
-          </div>
-          <div>
             <label className="text-xs uppercase tracking-widest text-muted-foreground">Active</label>
             <select name="active" defaultValue={vehicle.active ? "true" : "false"} className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm">
               <option value="true">true</option>
@@ -129,10 +112,6 @@ export default function EditVehiclePage() {
           <div className="md:col-span-2">
             <label className="text-xs uppercase tracking-widest text-muted-foreground">Notes</label>
             <input name="notes" defaultValue={vehicle.notes ?? ""} className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm" />
-          </div>
-          <div className="md:col-span-2">
-            <label className="text-xs uppercase tracking-widest text-muted-foreground">Insurance Notes</label>
-            <input name="insurance_notes" defaultValue={vehicle.insurance_notes ?? ""} className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm" />
           </div>
         </div>
 

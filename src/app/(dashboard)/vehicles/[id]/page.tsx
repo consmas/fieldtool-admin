@@ -349,6 +349,9 @@ export default function VehicleDetailPage() {
           <Link href={`/maintenance?tab=work_orders&vehicle_id=${vehicleId}`} className="rounded-lg border border-border px-3 py-2 text-sm">
             Open Maintenance
           </Link>
+          <Link href={`/vehicles/${vehicleId}/insurance`} className="rounded-lg border border-border px-3 py-2 text-sm">
+            Insurance
+          </Link>
           <Link href={`/vehicles/${vehicleId}/edit`} className="rounded-lg border border-border px-3 py-2 text-sm">
             Edit Vehicle
           </Link>
@@ -554,12 +557,20 @@ export default function VehicleDetailPage() {
 
       <div className="grid gap-4 xl:grid-cols-2">
         <section id="insurance" className="ops-card p-4">
-          <h3 className="mb-3 text-sm font-semibold">Insurance</h3>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold">Insurance</h3>
+            <Link
+              href={`/vehicles/${vehicleId}/insurance`}
+              className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold"
+            >
+              Manage Insurance
+            </Link>
+          </div>
           <div className="space-y-1 text-sm">
             <p className="text-muted-foreground">Policy: <span className="text-foreground">{vehicle.insurance_policy_number ?? "-"}</span></p>
             <p className="text-muted-foreground">Provider: <span className="text-foreground">{vehicle.insurance_provider ?? "-"}</span></p>
-            <p className="text-muted-foreground">Issued: <span className="text-foreground">{vehicle.insurance_issued_at ?? "-"}</span></p>
-            <p className="text-muted-foreground">Expires: <span className="text-foreground">{vehicle.insurance_expires_at ?? "-"}</span></p>
+            <p className="text-muted-foreground">Issued: <span className="text-foreground">{vehicle.insurance_issued_at ? formatDate(vehicle.insurance_issued_at) : "-"}</span></p>
+            <p className="text-muted-foreground">Expires: <span className="text-foreground">{vehicle.insurance_expires_at ? formatDate(vehicle.insurance_expires_at) : "-"}</span></p>
             <p className="text-muted-foreground">Coverage: <span className="text-foreground">{vehicle.insurance_coverage_amount ?? "-"}</span></p>
             <p className="text-muted-foreground">Notes: <span className="text-foreground">{vehicle.insurance_notes ?? "-"}</span></p>
             {vehicle.insurance?.document_url || vehicle.insurance_document_url ? (
