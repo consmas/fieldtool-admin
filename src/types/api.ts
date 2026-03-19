@@ -236,8 +236,11 @@ export interface Destination {
   average_distance_km: number;
   base_km: number;
   base_trip_cost: number;
-  liters_per_km: number;
+  kms_per_liter: number;
+  additional_provision_pct: number;
   active: boolean;
+  current_fuel_price?: number;
+  expected_rate?: number;
 }
 
 export interface FuelPrice {
@@ -247,14 +250,19 @@ export interface FuelPrice {
 }
 
 export interface RateCalculationResponse {
-  base_trip_cost: number;
   base_km: number;
-  total_km: number;
-  liters_per_km: number;
-  fuel_cost_per_km: number;
-  extra_distance_charge: number;
-  extra_stop_charge: number;
-  final_trip_cost: number;
+  average_distance_km: number;
+  route_extra_km: number;
+  additional_provision_pct: number;
+  kms_per_liter: number;
+  fuel_price: number;
+  base_fuel_cost: number;
+  extra_fuel_cost: number;
+  other_cost: number;
+  extra_km: number;
+  stop_fuel_cost: number;
+  expected_rate: number;
+  fuel_price_used?: number;
 }
 
 export interface PreTripInspection {

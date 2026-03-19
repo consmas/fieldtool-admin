@@ -56,7 +56,10 @@ export default function DestinationsPage() {
                 <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                   <p>Avg KM: {dest.average_distance_km}</p>
                   <p>Base KM: {dest.base_km}</p>
-                  <p>Base Cost: {dest.base_trip_cost}</p>
+                  <p>Other Costs (GHS): {dest.base_trip_cost}</p>
+                  <p>KMs/Litre: {dest.kms_per_liter}</p>
+                  <p>Provision: {dest.additional_provision_pct != null ? `${(Number(dest.additional_provision_pct) * 100).toFixed(0)}%` : "-"}</p>
+                  <p>Expected Rate: {dest.expected_rate != null ? `GHS ${Number(dest.expected_rate).toLocaleString()}` : "-"}</p>
                   <p>Active: {dest.active ? "Yes" : "No"}</p>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2">
@@ -90,7 +93,10 @@ export default function DestinationsPage() {
                 <th className="py-2">Name</th>
                 <th className="py-2">Avg KM</th>
                 <th className="py-2">Base KM</th>
-                <th className="py-2">Base Cost</th>
+                <th className="py-2">Other Costs (GHS)</th>
+                <th className="py-2">KMs/Litre</th>
+                <th className="py-2">Provision %</th>
+                <th className="py-2">Expected Rate (GHS)</th>
                 <th className="py-2">Active</th>
                 <th className="py-2">Actions</th>
               </tr>
@@ -99,16 +105,17 @@ export default function DestinationsPage() {
               {destinations.map((dest) => (
                 <tr key={dest.id} className="border-t border-border">
                   <td className="py-3">{dest.name}</td>
-                  <td className="py-3 text-muted-foreground">
-                    {dest.average_distance_km}
-                  </td>
+                  <td className="py-3 text-muted-foreground">{dest.average_distance_km}</td>
                   <td className="py-3 text-muted-foreground">{dest.base_km}</td>
+                  <td className="py-3 text-muted-foreground">{dest.base_trip_cost}</td>
+                  <td className="py-3 text-muted-foreground">{dest.kms_per_liter}</td>
                   <td className="py-3 text-muted-foreground">
-                    {dest.base_trip_cost}
+                    {dest.additional_provision_pct != null ? `${(Number(dest.additional_provision_pct) * 100).toFixed(0)}%` : "-"}
                   </td>
-                  <td className="py-3 text-muted-foreground">
-                    {dest.active ? "Yes" : "No"}
+                  <td className="py-3 font-medium text-foreground">
+                    {dest.expected_rate != null ? Number(dest.expected_rate).toLocaleString("en-GH", { minimumFractionDigits: 2 }) : "-"}
                   </td>
+                  <td className="py-3 text-muted-foreground">{dest.active ? "Yes" : "No"}</td>
                   <td className="py-3">
                     <div className="flex gap-2">
                       <Link

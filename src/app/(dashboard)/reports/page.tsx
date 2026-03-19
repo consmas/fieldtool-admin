@@ -122,7 +122,7 @@ function csvEscape(value: unknown) {
 }
 
 function downloadCsv(filename: string, rows: Array<Array<unknown>>) {
-  const content = rows.map((row) => row.map(csvEscape).join(",")).join("\n");
+  const content = "\uFEFF" + rows.map((row) => row.map(csvEscape).join(",")).join("\n");
   const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -654,7 +654,7 @@ export default function ReportsPage() {
         return;
       }
 
-      const rows = getArrayFromAny(activeData, ["by_trip", "trip_expenses", "trips"]).map((item) => {
+      const tripRows = getArrayFromAny(activeData, ["by_trip", "trip_expenses", "trips"]).map((item) => {
         const row = toRecord(item);
         return [
           String(row.trip_id ?? row.trip ?? row.name ?? "-"),
@@ -663,7 +663,22 @@ export default function ReportsPage() {
           String(row.status ?? "-"),
         ];
       });
-      downloadCsv(filename, [["Trip", "Category", "Amount (GHS)", "Status"], ...rows]);
+      if (tripRows.length > 0) {
+        downloadCsv(filename, [["Trip", "Category", "Amount (GHS)", "Status"], ...tripRows]);
+        return;
+      }
+      // Fallback: export category breakdown
+      const categoryRows = mapTotalsFromAny(
+        activeData.by_category ?? activeData.category_totals ?? activeData.categories ?? toRecord(activeData.totals).by_category
+      ).map((item) => [getExpenseCategoryLabel(item.label), item.value.toFixed(2)]);
+      const statusRows = mapTotalsFromAny(
+        activeData.by_status ?? activeData.status_totals ?? activeData.statuses ?? toRecord(activeData.totals).by_status
+      ).map((item) => [item.label, item.value.toFixed(2)]);
+      downloadCsv(filename, [
+        ["Section", "Label", "Amount (GHS)"],
+        ...categoryRows.map((r) => ["By Category", ...r]),
+        ...statusRows.map((r) => ["By Status", ...r]),
+      ]);
       return;
     }
 
@@ -751,7 +766,7 @@ export default function ReportsPage() {
         return;
       }
 
-      const rows = getArrayFromAny(activeData, ["by_trip", "trip_expenses", "trips"]).map((item) => {
+      const tripRows = getArrayFromAny(activeData, ["by_trip", "trip_expenses", "trips"]).map((item) => {
         const row = toRecord(item);
         return [
           String(row.trip_id ?? row.trip ?? row.name ?? "-"),
@@ -760,7 +775,18 @@ export default function ReportsPage() {
           String(row.status ?? "-"),
         ];
       });
-      exportPdfFromRows(title, ["Trip", "Category", "Amount (GHS)", "Status"], rows);
+      if (tripRows.length > 0) {
+        exportPdfFromRows(title, ["Trip", "Category", "Amount (GHS)", "Status"], tripRows);
+        return;
+      }
+      // Fallback: export category and status breakdown
+      const categoryRows = mapTotalsFromAny(
+        activeData.by_category ?? activeData.category_totals ?? activeData.categories ?? toRecord(activeData.totals).by_category
+      ).map((item) => ["By Category", getExpenseCategoryLabel(item.label), item.value.toFixed(2)]);
+      const statusRows = mapTotalsFromAny(
+        activeData.by_status ?? activeData.status_totals ?? activeData.statuses ?? toRecord(activeData.totals).by_status
+      ).map((item) => ["By Status", item.label, item.value.toFixed(2)]);
+      exportPdfFromRows(title, ["Section", "Label", "Amount (GHS)"], [...categoryRows, ...statusRows]);
       return;
     }
 
@@ -1222,12 +1248,21 @@ export default function ReportsPage() {
             onChange={(e) => setFilterState((p) => ({ ...p, date_to: e.target.value }))}
             className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition focus:border-primary"
           />
-          <input
-            placeholder="Status"
+          <select
             value={filterState.status}
             onChange={(e) => setFilterState((p) => ({ ...p, status: e.target.value }))}
             className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition focus:border-primary"
-          />
+          >
+            <option value="">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="draft">Draft</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="paid">Paid</option>
+          </select>
           <select
             value={filterState.category}
             onChange={(e) => setFilterState((p) => ({ ...p, category: e.target.value }))}

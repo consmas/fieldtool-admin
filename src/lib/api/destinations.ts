@@ -29,10 +29,25 @@ export async function deleteDestination(id: number) {
 
 export async function calculateDestinationRate(
   id: number,
-  payload: { fuel_price_current: number; additional_km?: number }
+  payload: { fuel_price_current?: number; additional_km?: number; period?: string }
 ): Promise<RateCalculationResponse> {
   const { data } = await apiClient.post<RateCalculationResponse>(
     `/destinations/${id}/calculate`,
+    payload
+  );
+  return data;
+}
+
+export async function previewDestinationRate(payload: {
+  average_distance_km?: number;
+  base_km?: number;
+  base_trip_cost?: number;
+  kms_per_liter?: number;
+  additional_provision_pct?: number;
+  period?: string;
+}): Promise<RateCalculationResponse> {
+  const { data } = await apiClient.post<RateCalculationResponse>(
+    "/destinations/preview_rate",
     payload
   );
   return data;

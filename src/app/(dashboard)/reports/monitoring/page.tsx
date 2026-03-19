@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import {
+  downloadWorkbookExport,
   fetchBudgetWorkbook,
   fetchMonitoringRegime,
   fetchMonitoringWorkbook,
@@ -70,6 +71,33 @@ function formatCell(value: unknown) {
 
 function isAbsoluteUrl(value: string) {
   return /^https?:\/\//i.test(value);
+}
+
+function csvEscape(value: unknown) {
+  const str = String(value ?? "");
+  return `"${str.replace(/"/g, '""')}"`;
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportTableCsv(filename: string, columns: string[], rows: TableRow[]) {
+  const header = columns.map(csvEscape).join(",");
+  const body = rows.map((row) =>
+    columns.map((col, idx) => {
+      const val = Array.isArray(row) ? row[idx] : row[col];
+      return csvEscape(val);
+    }).join(",")
+  );
+  const content = "\uFEFF" + [header, ...body].join("\n");
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+  downloadBlob(blob, filename);
 }
 
 function LoadingSkeletonTable() {
@@ -212,8 +240,9 @@ export default function MonitoringReportsPage() {
     if (tab === "budget") {
       const revenueRows = toRows(budget.revenue_breakdown_rows);
       const monthlyRows = toRows(budget.monthly_budget_rows);
-      const revenueColumns = toColumns({ tab_headers: budget.revenue_breakdown_headers, rows: revenueRows }, revenueRows);
-      const monthlyColumns = toColumns({ tab_headers: budget.monthly_budget_headers, rows: monthlyRows }, monthlyRows);
+      const budgetTabHeaders = toRecord(budget.tab_headers);
+      const revenueColumns = toColumns({ tab_headers: budgetTabHeaders.revenue_breakdown }, revenueRows);
+      const monthlyColumns = toColumns({ tab_headers: budgetTabHeaders.monthly_budget }, monthlyRows);
       return { columns: [], rows: [], revenueRows, monthlyRows, revenueColumns, monthlyColumns };
     }
 
@@ -257,12 +286,41 @@ export default function MonitoringReportsPage() {
     };
   }, [tab, workbookQ, regimeQ, budgetQ]);
 
-  const onExportClick = (url: string | undefined, label: string) => {
-    if (!openExportLink(url)) {
-      setMessage(`Missing export link for ${label}.`);
+  const [exporting, setExporting] = useState<string | null>(null);
+
+  const onDownloadExport = async (
+    endpoint: "monitoring_workbook" | "monitoring_regime" | "budget_workbook",
+    exportType: "xlsx" | "csv",
+    label: string,
+    fallbackUrl?: string
+  ) => {
+    // Try backend export link first (absolute URL)
+    if (fallbackUrl && isAbsoluteUrl(fallbackUrl)) {
+      openExportLink(fallbackUrl);
       return;
     }
-    setMessage(`${label} export opened in a new tab.`);
+    // Stream directly from the API
+    const key = `${endpoint}-${exportType}`;
+    setExporting(key);
+    try {
+      const { blob } = await downloadWorkbookExport({ endpoint, month, exportType });
+      downloadBlob(blob, `${endpoint}_${month}.${exportType}`);
+    } catch {
+      setMessage(`Export failed for ${label}.`);
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const onExportTabCsv = () => {
+    if (sheet.columns.length > 0) {
+      exportTableCsv(`workbook_${tab}_${month}.csv`, sheet.columns, sheet.rows);
+    } else if (tab === "budget") {
+      if (sheet.revenueColumns.length > 0) exportTableCsv(`budget_revenue_${month}.csv`, sheet.revenueColumns, sheet.revenueRows);
+      if (sheet.monthlyColumns.length > 0) exportTableCsv(`budget_monthly_${month}.csv`, sheet.monthlyColumns, sheet.monthlyRows);
+    } else {
+      setMessage("No data to export for the current tab.");
+    }
   };
 
   const onSyncWorkbook = async () => {
@@ -314,35 +372,42 @@ export default function MonitoringReportsPage() {
           ) : null}
           <button
             type="button"
-            className="rounded-lg border border-border px-3 py-2 text-sm"
-            onClick={() => onExportClick(String(workbookExportLinks.csv ?? ""), "Workbook CSV")}
-            disabled={!workbookExportLinks.csv}
+            className="rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-60"
+            onClick={onExportTabCsv}
           >
-            Workbook CSV
+            Export Tab CSV
           </button>
           <button
             type="button"
-            className="rounded-lg border border-border px-3 py-2 text-sm"
-            onClick={() => onExportClick(String(workbookExportLinks.xlsx ?? ""), "Workbook XLSX")}
-            disabled={!workbookExportLinks.xlsx}
+            className="rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-60"
+            onClick={() => onDownloadExport("monitoring_workbook", "csv", "Workbook CSV", String(workbookExportLinks.csv ?? ""))}
+            disabled={exporting === "monitoring_workbook-csv"}
           >
-            Workbook XLSX
+            {exporting === "monitoring_workbook-csv" ? "Downloading..." : "Workbook CSV"}
           </button>
           <button
             type="button"
-            className="rounded-lg border border-border px-3 py-2 text-sm"
-            onClick={() => onExportClick(String(regimeExportLinks.xlsx ?? ""), "Regime XLSX")}
-            disabled={!regimeExportLinks.xlsx}
+            className="rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-60"
+            onClick={() => onDownloadExport("monitoring_workbook", "xlsx", "Workbook XLSX", String(workbookExportLinks.xlsx ?? ""))}
+            disabled={exporting === "monitoring_workbook-xlsx"}
           >
-            Regime XLSX
+            {exporting === "monitoring_workbook-xlsx" ? "Downloading..." : "Workbook XLSX"}
           </button>
           <button
             type="button"
-            className="rounded-lg border border-border px-3 py-2 text-sm"
-            onClick={() => onExportClick(String(budgetExportLinks.xlsx ?? ""), "Budget XLSX")}
-            disabled={!budgetExportLinks.xlsx}
+            className="rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-60"
+            onClick={() => onDownloadExport("monitoring_regime", "xlsx", "Regime XLSX", String(regimeExportLinks.xlsx ?? ""))}
+            disabled={exporting === "monitoring_regime-xlsx"}
           >
-            Budget XLSX
+            {exporting === "monitoring_regime-xlsx" ? "Downloading..." : "Regime XLSX"}
+          </button>
+          <button
+            type="button"
+            className="rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-60"
+            onClick={() => onDownloadExport("budget_workbook", "xlsx", "Budget XLSX", String(budgetExportLinks.xlsx ?? ""))}
+            disabled={exporting === "budget_workbook-xlsx"}
+          >
+            {exporting === "budget_workbook-xlsx" ? "Downloading..." : "Budget XLSX"}
           </button>
         </div>
       </div>

@@ -75,28 +75,16 @@ export default function CompliancePage() {
   const saveDocMutation = useMutation({
     mutationFn: async () => {
       if (!form.driver_id) throw new Error("Select a driver.");
-      const payload = documentFile
-        ? (() => {
-            const fd = new FormData();
-            fd.append("document_type", form.document_type);
-            fd.append("document_number", form.document_number);
-            if (form.issued_date) fd.append("issued_date", form.issued_date);
-            if (form.expiry_date) fd.append("expiry_date", form.expiry_date);
-            if (form.status) fd.append("status", form.status);
-            if (form.verification_status) fd.append("verification_status", form.verification_status);
-            if (form.notes) fd.append("notes", form.notes);
-            fd.append("file", documentFile);
-            return fd;
-          })()
-        : {
-            document_type: form.document_type,
-            document_number: form.document_number,
-            issued_date: form.issued_date || undefined,
-            expiry_date: form.expiry_date || undefined,
-            status: form.status || undefined,
-            verification_status: form.verification_status || undefined,
-            notes: form.notes || undefined,
-          };
+      const fd = new FormData();
+      fd.append("document[document_type]", form.document_type);
+      fd.append("document[document_number]", form.document_number);
+      if (form.issued_date) fd.append("document[issued_at]", form.issued_date);
+      if (form.expiry_date) fd.append("document[expires_at]", form.expiry_date);
+      if (form.status) fd.append("document[status]", form.status);
+      if (form.verification_status) fd.append("document[verification_status]", form.verification_status);
+      if (form.notes) fd.append("document[notes]", form.notes);
+      if (documentFile) fd.append("document[file]", documentFile);
+      const payload = fd;
       if (form.id) return updateDriverDocument(form.driver_id, form.id, payload);
       return createDriverDocument(form.driver_id, payload);
     },
@@ -161,7 +149,17 @@ export default function CompliancePage() {
               return <option key={`${id}-${idx}`} value={id}>{String(row.name ?? row.email ?? `Driver ${id}`)}</option>;
             })}
           </select>
-          <input value={form.document_type} onChange={(e) => setForm((p) => ({ ...p, document_type: e.target.value }))} placeholder="Document type" className="rounded-lg border border-border bg-card px-3 py-2 text-sm" />
+          <select value={form.document_type} onChange={(e) => setForm((p) => ({ ...p, document_type: e.target.value }))} className="rounded-lg border border-border bg-card px-3 py-2 text-sm">
+            <option value="">Select document type</option>
+            <option value="driving_license">Driving License</option>
+            <option value="vehicle_registration">Vehicle Registration</option>
+            <option value="road_worthiness">Road Worthiness</option>
+            <option value="insurance">Insurance</option>
+            <option value="road_tax">Road Tax</option>
+            <option value="passport">Passport</option>
+            <option value="national_id">National ID</option>
+            <option value="other">Other</option>
+          </select>
           <input value={form.document_number} onChange={(e) => setForm((p) => ({ ...p, document_number: e.target.value }))} placeholder="Document number" className="rounded-lg border border-border bg-card px-3 py-2 text-sm" />
           <input type="date" value={form.issued_date} onChange={(e) => setForm((p) => ({ ...p, issued_date: e.target.value }))} className="rounded-lg border border-border bg-card px-3 py-2 text-sm" />
           <input type="date" value={form.expiry_date} onChange={(e) => setForm((p) => ({ ...p, expiry_date: e.target.value }))} className="rounded-lg border border-border bg-card px-3 py-2 text-sm" />
@@ -198,7 +196,7 @@ export default function CompliancePage() {
                 <div key={docId} className="rounded border border-border p-3 text-sm">
                   <p className="font-medium text-foreground">{String(doc.document_type ?? doc.type ?? "Document")}</p>
                   <p className="text-xs text-muted-foreground">
-                    #{String(doc.document_number ?? "-")} · Issued {String(doc.issued_date ?? "-")} · Expiry {String(doc.expiry_date ?? "-")}
+                    #{String(doc.document_number ?? "-")} · Issued {String(doc.issued_at ?? doc.issued_date ?? "-")} · Expiry {String(doc.expires_at ?? doc.expiry_date ?? "-")}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     Status {String(doc.status ?? "-")} · Verification {String(doc.verification_status ?? "-")} · Days-to-expiry {String(doc.days_to_expiry ?? "-")}
@@ -209,8 +207,8 @@ export default function CompliancePage() {
                       driver_id: selectedDriverId,
                       document_type: String(doc.document_type ?? doc.type ?? ""),
                       document_number: String(doc.document_number ?? ""),
-                      issued_date: String(doc.issued_date ?? ""),
-                      expiry_date: String(doc.expiry_date ?? ""),
+                      issued_date: String(doc.issued_at ?? doc.issued_date ?? ""),
+                      expiry_date: String(doc.expires_at ?? doc.expiry_date ?? ""),
                       status: String(doc.status ?? "active"),
                       verification_status: String(doc.verification_status ?? "pending"),
                       notes: String(doc.notes ?? ""),
@@ -251,7 +249,7 @@ export default function CompliancePage() {
                 <div key={i} className={`rounded border p-3 text-sm ${className}`}>
                   <p className="font-medium text-foreground">{String(doc.driver_name ?? doc.driver ?? `Driver ${doc.driver_id ?? "-"}`)}</p>
                   <p className="text-xs text-muted-foreground">
-                    {String(doc.document_type ?? "-")} · Expires {String(doc.expiry_date ?? "-")} · {days < 0 ? "Expired" : `${days} days left`}
+                    {String(doc.document_type ?? "-")} · Expires {String(doc.expires_at ?? doc.expiry_date ?? "-")} · {days < 0 ? "Expired" : `${days} days left`}
                   </p>
                 </div>
               );
