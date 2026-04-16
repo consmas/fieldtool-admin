@@ -233,14 +233,18 @@ export interface Vehicle {
 export interface Destination {
   id: number;
   name: string;
-  average_distance_km: number;
-  base_km: number;
-  base_trip_cost: number;
-  kms_per_liter: number;
-  additional_provision_pct: number;
+  average_distance_km?: number | null;
+  base_price_per_ton?: number | null;
+  tons_per_trip?: number | null;
+  base_km?: number | null;
+  base_trip_cost?: number | null;
+  kms_per_liter?: number | null;
+  liters_per_km?: number | null;
+  fuel_price_ref?: number | null;
+  additional_provision_pct?: number | null;
   active: boolean;
-  current_fuel_price?: number;
-  expected_rate?: number;
+  current_fuel_price?: number | null;
+  expected_rate?: number | null;
 }
 
 export interface FuelPrice {

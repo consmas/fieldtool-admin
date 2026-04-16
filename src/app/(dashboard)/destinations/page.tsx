@@ -54,12 +54,12 @@ export default function DestinationsPage() {
               <div key={dest.id} className="ops-card p-3">
                 <p className="font-semibold text-foreground">{dest.name}</p>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                  <p>Avg KM: {dest.average_distance_km}</p>
-                  <p>Base KM: {dest.base_km}</p>
-                  <p>Other Costs (GHS): {dest.base_trip_cost}</p>
-                  <p>KMs/Litre: {dest.kms_per_liter}</p>
-                  <p>Provision: {dest.additional_provision_pct != null ? `${(Number(dest.additional_provision_pct) * 100).toFixed(0)}%` : "-"}</p>
-                  <p>Expected Rate: {dest.expected_rate != null ? `GHS ${Number(dest.expected_rate).toLocaleString()}` : "-"}</p>
+                  <p>Avg KM: {dest.average_distance_km ?? "-"}</p>
+                  <p>Base KM: {dest.base_km ?? "-"}</p>
+                  <p>Base Trip Cost: {dest.base_trip_cost ?? "-"}</p>
+                  <p>Liters/KM: {dest.liters_per_km ?? "-"}</p>
+                  <p>Current Fuel Price: {dest.current_fuel_price ?? "-"}</p>
+                  <p>Expected Rate: {dest.expected_rate ?? "-"}</p>
                   <p>Active: {dest.active ? "Yes" : "No"}</p>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2">
@@ -87,16 +87,16 @@ export default function DestinationsPage() {
 
           <div className="ops-card hidden p-4 md:block">
             <div className="overflow-x-auto">
-              <table className="min-w-[780px] w-full text-sm">
+              <table className="min-w-[980px] w-full text-sm">
             <thead className="text-left text-xs uppercase tracking-widest text-muted-foreground">
               <tr>
                 <th className="py-2">Name</th>
                 <th className="py-2">Avg KM</th>
                 <th className="py-2">Base KM</th>
-                <th className="py-2">Other Costs (GHS)</th>
-                <th className="py-2">KMs/Litre</th>
-                <th className="py-2">Provision %</th>
-                <th className="py-2">Expected Rate (GHS)</th>
+                <th className="py-2">Base Trip Cost</th>
+                <th className="py-2">Liters/KM</th>
+                <th className="py-2">Current Fuel Price</th>
+                <th className="py-2">Expected Rate</th>
                 <th className="py-2">Active</th>
                 <th className="py-2">Actions</th>
               </tr>
@@ -105,13 +105,11 @@ export default function DestinationsPage() {
               {destinations.map((dest) => (
                 <tr key={dest.id} className="border-t border-border">
                   <td className="py-3">{dest.name}</td>
-                  <td className="py-3 text-muted-foreground">{dest.average_distance_km}</td>
-                  <td className="py-3 text-muted-foreground">{dest.base_km}</td>
-                  <td className="py-3 text-muted-foreground">{dest.base_trip_cost}</td>
-                  <td className="py-3 text-muted-foreground">{dest.kms_per_liter}</td>
-                  <td className="py-3 text-muted-foreground">
-                    {dest.additional_provision_pct != null ? `${(Number(dest.additional_provision_pct) * 100).toFixed(0)}%` : "-"}
-                  </td>
+                  <td className="py-3 text-muted-foreground">{dest.average_distance_km ?? "-"}</td>
+                  <td className="py-3 text-muted-foreground">{dest.base_km ?? "-"}</td>
+                  <td className="py-3 text-muted-foreground">{dest.base_trip_cost ?? "-"}</td>
+                  <td className="py-3 text-muted-foreground">{dest.liters_per_km ?? "-"}</td>
+                  <td className="py-3 text-muted-foreground">{dest.current_fuel_price ?? "-"}</td>
                   <td className="py-3 font-medium text-foreground">
                     {dest.expected_rate != null ? Number(dest.expected_rate).toLocaleString("en-GH", { minimumFractionDigits: 2 }) : "-"}
                   </td>
