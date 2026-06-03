@@ -8,6 +8,7 @@ import { createTripStop } from "@/lib/api/stops";
 import { fetchUsers } from "@/lib/api/users";
 import { fetchVehicles } from "@/lib/api/vehicles";
 import { fetchDestinations } from "@/lib/api/destinations";
+import { fetchClientUsers } from "@/lib/api/client_users";
 import type { Trip, TripStop } from "@/types/api";
 
 export default function NewTripPage() {
@@ -26,6 +27,10 @@ export default function NewTripPage() {
     queryKey: ["destinations"],
     queryFn: fetchDestinations,
   });
+  const { data: clientUsers = [] } = useQuery({
+    queryKey: ["client-users", "trip-form"],
+    queryFn: fetchClientUsers,
+  });
 
   const createMutation = useMutation({
     mutationFn: createTrip,
@@ -43,9 +48,9 @@ export default function NewTripPage() {
         <p className="text-xs uppercase tracking-widest text-muted-foreground">
           Trips
         </p>
-        <h2 className="text-xl font-semibold">New Trip</h2>
+        <h2 className="text-xl font-semibold">Create Trip</h2>
         <p className="text-sm text-muted-foreground">
-          Create a trip with Section A & B fields.
+          Add the client, route, driver, vehicle, and delivery details in one flow.
         </p>
       </div>
 
@@ -53,6 +58,7 @@ export default function NewTripPage() {
         users={users}
         vehicles={vehicles}
         destinations={destinations}
+        clientUsers={clientUsers}
         submitLabel={
           createMutation.isPending ? "Creating..." : "Create Trip"
         }

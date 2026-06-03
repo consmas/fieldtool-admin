@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Filter, Plus, Search, Trash2 } from "lucide-react";
 import TripStatusBadge from "@/components/trips/TripStatusBadge";
+import TripWorkflowSteps from "@/components/trips/TripWorkflowSteps";
 import { deleteTrip, fetchTrips } from "@/lib/api/trips";
 import type { Trip } from "@/types/api";
 import { formatDate } from "@/lib/utils/format";
@@ -36,6 +37,33 @@ function getStatusBucket(status?: string): FilterKey {
   if (["planned", "scheduled", "assigned", "dispatched"].includes(normalized)) return "scheduled";
   if (["in_progress", "en_route", "loaded", "in_transit"].includes(normalized)) return "in_transit";
   return "all";
+}
+
+function getNextAction(trip: Trip) {
+  const status = (trip.status ?? "").toLowerCase();
+  if (["draft", "planned", "scheduled", "assigned"].includes(status)) {
+    return { label: "Dispatch", href: `/dispatch?trip_id=${trip.id}`, tone: "warning" };
+  }
+  if (["loaded", "dispatched", "en_route", "in_progress", "in_transit"].includes(status)) {
+    return { label: "Monitor", href: `/trips/${trip.id}`, tone: "info" };
+  }
+  if (["arrived", "offloaded"].includes(status)) {
+    return { label: "Complete", href: `/trips/${trip.id}`, tone: "success" };
+  }
+  if (["completed"].includes(status)) {
+    return { label: "Reconcile", href: `/finance?trip_id=${trip.id}`, tone: "default" };
+  }
+  if (["reconciled"].includes(status)) {
+    return { label: "Close", href: `/trips/${trip.id}`, tone: "default" };
+  }
+  return { label: "Review", href: `/trips/${trip.id}`, tone: "default" };
+}
+
+function actionToneClass(tone: string) {
+  if (tone === "warning") return "border-amber-500/35 bg-amber-500/10 text-amber-300";
+  if (tone === "info") return "border-sky-500/35 bg-sky-500/10 text-sky-300";
+  if (tone === "success") return "border-emerald-500/35 bg-emerald-500/10 text-emerald-300";
+  return "border-border bg-card text-muted-foreground";
 }
 
 export default function TripsPage() {
@@ -151,9 +179,9 @@ export default function TripsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3 md:gap-4">
         <div>
           <p className="ops-section-title">Trips</p>
-          <h2 className="text-lg font-semibold md:text-xl">Trip Monitor</h2>
+          <h2 className="text-lg font-semibold md:text-xl">Trip Workflow</h2>
           <p className="text-sm text-muted-foreground">
-            Operational queue with fast filters, selection, and quick actions.
+            Create, dispatch, monitor, complete, reconcile, and close trips from one queue.
           </p>
         </div>
         <div className="flex w-full items-center gap-2 sm:w-auto">
@@ -166,6 +194,8 @@ export default function TripsPage() {
           </Link>
         </div>
       </div>
+
+      <TripWorkflowSteps status={filter === "completed" ? "completed" : filter === "in_transit" ? "en_route" : "assigned"} />
 
       <div className="ops-card p-3 sm:p-4">
         <div className="flex flex-col gap-3">
@@ -265,6 +295,10 @@ export default function TripsPage() {
               ) : (
                 pageTrips.map((trip) => (
                   <div key={trip.id} className="rounded-lg border border-border bg-card p-3">
+                    {(() => {
+                      const action = getNextAction(trip);
+                      return (
+                        <>
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <Link href={`/trips/${trip.id}`} className="block truncate font-semibold text-foreground hover:text-primary">
@@ -294,8 +328,8 @@ export default function TripsPage() {
                       <span className="text-right">Fuel: {toNumber(trip.fuel_allocated_litres) > 0 ? `${toNumber(trip.fuel_allocated_litres).toFixed(0)} L` : "-"}</span>
                     </div>
                     <div className="mt-3 grid grid-cols-3 gap-2">
-                      <Link href={`/trips/${trip.id}`} className="rounded-md border border-border px-2 py-2 text-center text-xs text-muted-foreground">
-                        View
+                      <Link href={action.href} className={`rounded-md border px-2 py-2 text-center text-xs ${actionToneClass(action.tone)}`}>
+                        {action.label}
                       </Link>
                       <Link href={`/trips/${trip.id}/edit`} className="rounded-md border border-border px-2 py-2 text-center text-xs text-muted-foreground">
                         Edit
@@ -310,6 +344,9 @@ export default function TripsPage() {
                         Delete
                       </button>
                     </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 ))
               )}
@@ -333,7 +370,7 @@ export default function TripsPage() {
                     <th className="px-4 py-3">Driver</th>
                     <th className="px-4 py-3">Vehicle</th>
                     <th className="px-4 py-3">Pickup</th>
-                    <th className="px-4 py-3">Fuel</th>
+                    <th className="px-4 py-3">Next Action</th>
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -347,6 +384,7 @@ export default function TripsPage() {
                   ) : (
                     pageTrips.map((trip) => {
                       const bucket = getStatusBucket(trip.status);
+                      const action = getNextAction(trip);
                       return (
                         <tr
                           key={trip.id}
@@ -376,8 +414,13 @@ export default function TripsPage() {
                           <td className="px-4 py-3 text-muted-foreground">
                             {formatDate(trip.trip_date ?? trip.scheduled_pickup_at ?? undefined)}
                           </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {toNumber(trip.fuel_allocated_litres) > 0 ? `${toNumber(trip.fuel_allocated_litres).toFixed(0)} L` : "-"}
+                          <td className="px-4 py-3">
+                            <Link
+                              href={action.href}
+                              className={`inline-flex rounded-md border px-2 py-1 text-xs font-semibold ${actionToneClass(action.tone)}`}
+                            >
+                              {action.label}
+                            </Link>
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex justify-end gap-2">

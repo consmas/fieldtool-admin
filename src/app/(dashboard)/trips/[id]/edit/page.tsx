@@ -7,6 +7,7 @@ import { fetchTrip, updateTrip } from "@/lib/api/trips";
 import { fetchUsers } from "@/lib/api/users";
 import { fetchVehicles } from "@/lib/api/vehicles";
 import { fetchDestinations } from "@/lib/api/destinations";
+import { fetchClientUsers } from "@/lib/api/client_users";
 import type { Trip } from "@/types/api";
 
 export default function EditTripPage() {
@@ -33,6 +34,10 @@ export default function EditTripPage() {
   const { data: destinations = [] } = useQuery({
     queryKey: ["destinations"],
     queryFn: fetchDestinations,
+  });
+  const { data: clientUsers = [] } = useQuery({
+    queryKey: ["client-users", "trip-form"],
+    queryFn: fetchClientUsers,
   });
 
   const updateMutation = useMutation({
@@ -68,6 +73,7 @@ export default function EditTripPage() {
         users={users}
         vehicles={vehicles}
         destinations={destinations}
+        clientUsers={clientUsers}
         initialTrip={trip}
         submitLabel={
           updateMutation.isPending ? "Updating..." : "Update Trip"

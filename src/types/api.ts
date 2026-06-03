@@ -52,7 +52,12 @@ export interface Trip {
   trip_date?: string | null;
   driver_contact?: string | null;
   truck_type_capacity?: string | null;
+  client_id?: number | string | null;
   client_name?: string | null;
+  client_email?: string | null;
+  client_billing_address?: string | null;
+  client_notes?: string | null;
+  save_client_for_future?: boolean | null;
   destination?: string | null;
   delivery_address?: string | null;
   delivery_place_id?: string | null;

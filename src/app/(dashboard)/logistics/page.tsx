@@ -8,9 +8,13 @@ import { fetchPreTrip } from "@/lib/api/pretrip";
 import type { Trip } from "@/types/api";
 import { formatDate } from "@/lib/utils/format";
 
-const TABS = ["pretrip", "fuel", "road"] as const;
+const TABS = [
+  { key: "pretrip", label: "Inspection" },
+  { key: "fuel", label: "Fuel" },
+  { key: "road", label: "Road Expense" },
+] as const;
 
-type TabKey = (typeof TABS)[number];
+type TabKey = (typeof TABS)[number]["key"];
 
 export default function LogisticsPage() {
   const queryClient = useQueryClient();
@@ -161,9 +165,9 @@ export default function LogisticsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">Logistics Manager</p>
-        <h2 className="text-xl font-semibold">Workflow Console</h2>
-        <p className="text-sm text-muted-foreground">Verify inspections, allocate fuel, and manage road expenses.</p>
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">Dispatch</p>
+        <h2 className="text-xl font-semibold">Dispatch Checklist</h2>
+        <p className="text-sm text-muted-foreground">Prepare trips for departure without jumping between modules.</p>
       </div>
 
       <div className="ops-card p-4">
@@ -297,16 +301,16 @@ export default function LogisticsPage() {
               </h3>
             </div>
             <div className="flex flex-wrap gap-2 text-xs">
-              {TABS.map((key) => (
+              {TABS.map((tabDef) => (
                 <button
-                  key={key}
+                  key={tabDef.key}
                   type="button"
                   className={`rounded-xl border px-3 py-1 ${
-                    tab === key ? "border-primary bg-primary/10" : "border-border"
+                    tab === tabDef.key ? "border-primary bg-primary/10" : "border-border"
                   }`}
-                  onClick={() => setTab(key)}
+                  onClick={() => setTab(tabDef.key)}
                 >
-                  {key === "pretrip" ? "Pre-Trip" : key === "fuel" ? "Fuel" : "Road"}
+                  {tabDef.label}
                 </button>
               ))}
             </div>

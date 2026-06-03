@@ -10,6 +10,7 @@ const dispatcherAllowed = [
   /^\/trips\/\d+$/,
   /^\/trips\/\d+\/edit$/,
   /^\/reports$/,
+  /^\/dispatch$/,
   /^\/trip-chats$/,
   /^\/trip-chats\/\d+$/,
   /^\/destinations$/,
@@ -22,6 +23,7 @@ const dispatcherAllowed = [
 const financeAllowed = [
   /^\/dashboard$/,
   /^\/reports$/,
+  /^\/finance$/,
   /^\/expenses$/,
   /^\/fuel-prices$/,
   /^\/fuel-deposit-reconciliation$/,

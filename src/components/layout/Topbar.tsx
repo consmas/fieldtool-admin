@@ -1,12 +1,40 @@
 "use client";
 
 import { Bell, Menu, Search } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/stores/auth.store";
 import ThemeToggle from "@/components/theme/ThemeToggle";
 import { AxleLogomark, AXLE_BRAND } from "@/components/branding/AxleLogo";
 
+function getPageTitle(pathname: string) {
+  if (pathname.startsWith("/trips")) return "Trips";
+  if (pathname.startsWith("/dispatch")) return "Dispatch";
+  if (pathname.startsWith("/logistics")) return "Dispatch";
+  if (pathname.startsWith("/finance")) return "Finance";
+  if (pathname.startsWith("/fleet")) return "Fleet";
+  if (pathname.startsWith("/clients")) return "Clients";
+  if (pathname.startsWith("/tracking")) return "Trip Tracking";
+  if (pathname.startsWith("/trip-chats")) return "Trip Messages";
+  if (pathname.startsWith("/expenses")) return "Expenses";
+  if (pathname.startsWith("/fuel")) return "Fuel";
+  if (pathname.startsWith("/reports")) return "Reports";
+  if (pathname.startsWith("/vehicles")) return "Vehicles";
+  if (pathname.startsWith("/maintenance")) return "Maintenance";
+  if (pathname.startsWith("/destinations")) return "Destinations";
+  if (pathname.startsWith("/compliance")) return "Compliance";
+  if (pathname.startsWith("/incidents")) return "Incidents";
+  if (pathname.startsWith("/driver-intelligence")) return "Drivers";
+  if (pathname.startsWith("/client-users")) return "Clients";
+  if (pathname.startsWith("/users")) return "Team";
+  if (pathname.startsWith("/audit-trail")) return "Audit Trail";
+  if (pathname.startsWith("/notifications")) return "Alerts & Settings";
+  return "Command Center";
+}
+
 export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
+  const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
+  const pageTitle = getPageTitle(pathname);
 
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-background/85 px-3 py-3 backdrop-blur sm:px-4 md:px-6 md:py-4">
@@ -16,7 +44,7 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
             <AxleLogomark size={18} color={AXLE_BRAND.amberLight} />
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Axle Command Center</p>
           </div>
-          <h1 className="text-lg font-semibold tracking-tight text-foreground md:text-xl">Admin Dashboard</h1>
+          <h1 className="text-lg font-semibold tracking-tight text-foreground md:text-xl">{pageTitle}</h1>
         </div>
 
         <div className="flex items-center gap-2 md:gap-3">

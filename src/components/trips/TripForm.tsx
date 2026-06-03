@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
+import TripWorkflowSteps from "@/components/trips/TripWorkflowSteps";
 import type { Destination, Trip, TripStop, User, Vehicle } from "@/types/api";
 
 const emptyForm: Partial<Trip> & {
@@ -16,7 +17,12 @@ const emptyForm: Partial<Trip> & {
   vehicle_id: null,
   truck_reg_no: "",
   truck_type_capacity: "",
+  client_id: null,
   client_name: "",
+  client_email: "",
+  client_billing_address: "",
+  client_notes: "",
+  save_client_for_future: false,
   waybill_number: "",
   destination: "",
   delivery_address: "",
@@ -55,6 +61,25 @@ type ParsedSharedLocation = {
   lng?: number;
   mapUrl?: string;
   placeId?: string;
+};
+
+type KnownClient = {
+  id: string;
+  name: string;
+  contactName: string;
+  email: string;
+  phone: string;
+  billingAddress: string;
+  notes: string;
+};
+
+type AddressSuggestionPayload = {
+  placeId?: unknown;
+  description?: unknown;
+  lat?: unknown;
+  lng?: unknown;
+  mapUrl?: unknown;
+  source?: "places_textsearch" | "geocode";
 };
 
 function parseLatLngText(input: string): { lat: number; lng: number } | null {
@@ -152,6 +177,7 @@ export interface TripFormProps {
   users: User[];
   vehicles: Vehicle[];
   destinations?: Destination[];
+  clientUsers?: Array<Record<string, unknown>>;
   initialTrip?: Trip | null;
   submitLabel: string;
   onSubmit: (payload: Partial<Trip> & { stops?: TripStop[] }) => void;
@@ -163,6 +189,7 @@ export default function TripForm({
   users,
   vehicles,
   destinations = [],
+  clientUsers = [],
   initialTrip,
   submitLabel,
   onSubmit,
@@ -188,7 +215,12 @@ export default function TripForm({
       truck_reg_no: initialTrip.truck_reg_no ?? initialTrip.vehicle?.license_plate ?? "",
       truck_type_capacity:
         initialTrip.truck_type_capacity ?? initialTrip.vehicle?.truck_type_capacity ?? "",
+      client_id: initialTrip.client_id ?? null,
       client_name: initialTrip.client_name ?? "",
+      client_email: initialTrip.client_email ?? "",
+      client_billing_address: initialTrip.client_billing_address ?? "",
+      client_notes: initialTrip.client_notes ?? "",
+      save_client_for_future: initialTrip.save_client_for_future ?? false,
       waybill_number: initialTrip.waybill_number ?? initialTrip.reference_code ?? "",
       destination: initialTrip.destination ?? initialTrip.dropoff_location ?? "",
       delivery_address: initialTrip.delivery_address ?? "",
@@ -204,8 +236,15 @@ export default function TripForm({
       stops: [],
     };
   });
+  const initialDeliveryCoordsRef = useRef({
+    lat: form.delivery_lat,
+    lng: form.delivery_lng,
+  });
 
   const [locationSource, setLocationSource] = useState("");
+  const [clientMode, setClientMode] = useState<"existing" | "new">(
+    initialTrip?.client_id ? "existing" : "new"
+  );
   const [locating, setLocating] = useState(false);
   const [resolvingShared, setResolvingShared] = useState(false);
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
@@ -239,6 +278,32 @@ export default function TripForm({
     [destinations, form.destination]
   );
 
+  const knownClients = useMemo(() => {
+    const seen = new Set<string>();
+    return clientUsers
+      .map((client, index) => {
+        const id = client.id ?? client.client_id ?? client.company_id ?? index;
+        const companyName = String(client.company_name ?? client.company ?? "").trim();
+        const name = String(client.name ?? "").trim();
+        const label = companyName || name;
+        const email = String(client.email ?? "").trim();
+        const phone = String(client.phone_number ?? client.phone ?? "").trim();
+        const key = `${label}|${email}|${phone}`.toLowerCase();
+        if (!label || seen.has(key)) return null;
+        seen.add(key);
+        return {
+          id: String(id),
+          name: label,
+          contactName: companyName ? name : "",
+          email,
+          phone,
+          billingAddress: String(client.billing_address ?? client.address ?? "").trim(),
+          notes: String(client.notes ?? "").trim(),
+        };
+      })
+      .filter((client): client is KnownClient => Boolean(client));
+  }, [clientUsers]);
+
   useEffect(() => {
     if (!mapsApiKey || typeof window === "undefined") return;
 
@@ -253,9 +318,10 @@ export default function TripForm({
       await importLibrary("maps");
       if (!mounted || !mapPreviewRef.current) return;
 
-      const hasInitialCoords = hasCoords(form.delivery_lat, form.delivery_lng);
+      const initialCoords = initialDeliveryCoordsRef.current;
+      const hasInitialCoords = hasCoords(initialCoords.lat, initialCoords.lng);
       const center = hasInitialCoords
-        ? { lat: Number(form.delivery_lat), lng: Number(form.delivery_lng) }
+        ? { lat: Number(initialCoords.lat), lng: Number(initialCoords.lng) }
         : { lat: 5.6037, lng: -0.187 }; // Accra fallback
 
       if (!mapRef.current) {
@@ -350,7 +416,7 @@ export default function TripForm({
           }
 
           setAddressSuggestions(
-            results.slice(0, 8).map((item: any) => ({
+            (results as AddressSuggestionPayload[]).slice(0, 8).map((item) => ({
               placeId: String(item.placeId ?? ""),
               description: String(item.description ?? ""),
               lat: Number(item.lat),
@@ -543,6 +609,11 @@ export default function TripForm({
       return;
     }
 
+    if (!String(form.client_name ?? "").trim()) {
+      setSubmitError("Client name is required.");
+      return;
+    }
+
     if (hasLat && hasLng) {
       if (Number(lat) < -90 || Number(lat) > 90) {
         setSubmitError("Delivery latitude must be between -90 and 90.");
@@ -563,7 +634,12 @@ export default function TripForm({
       driver_contact: (selectedDriver?.phone_number ?? form.driver_contact) || undefined,
       truck_type_capacity:
         (selectedVehicle?.truck_type_capacity ?? form.truck_type_capacity) || undefined,
+      client_id: form.client_id ?? undefined,
       client_name: form.client_name || undefined,
+      client_email: form.client_email || undefined,
+      client_billing_address: form.client_billing_address || undefined,
+      client_notes: form.client_notes || undefined,
+      save_client_for_future: Boolean(form.save_client_for_future),
       waybill_number: form.waybill_number || undefined,
       reference_code: form.waybill_number || undefined,
       destination: form.destination || undefined,
@@ -597,9 +673,11 @@ export default function TripForm({
       </div>
 
       <div className="mt-4 space-y-6">
+        <TripWorkflowSteps status={form.status} />
+
         <div>
           <p className="text-xs uppercase tracking-widest text-muted-foreground">
-            Section A • General
+            Step 1 • Trip Setup
           </p>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <div>
@@ -699,16 +777,175 @@ export default function TripForm({
 
         <div>
           <p className="text-xs uppercase tracking-widest text-muted-foreground">
-            Section B • Delivery Details
+            Step 2 • Client & Delivery
           </p>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="text-xs uppercase tracking-widest text-muted-foreground">Client Name</label>
-              <input
-                value={form.client_name ?? ""}
-                onChange={(event) => setForm((prev) => ({ ...prev, client_name: event.target.value }))}
-                className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
-              />
+            <div className="md:col-span-2 rounded-xl border border-border bg-muted/20 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Client</p>
+                <div className="flex rounded-xl border border-border bg-card p-1">
+                  <button
+                    type="button"
+                    onClick={() => setClientMode("existing")}
+                    className={`rounded-lg px-3 py-1.5 text-xs ${
+                      clientMode === "existing"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    Existing
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setClientMode("new");
+                      setForm((current) => ({
+                        ...current,
+                        client_id: null,
+                        save_client_for_future: current.save_client_for_future ?? false,
+                      }));
+                    }}
+                    className={`rounded-lg px-3 py-1.5 text-xs ${
+                      clientMode === "new"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    New
+                  </button>
+                </div>
+              </div>
+
+              {clientMode === "existing" ? (
+                <div className="mt-4">
+                  <label className="text-xs uppercase tracking-widest text-muted-foreground">
+                    Select Client
+                  </label>
+                  <select
+                    value={form.client_id ?? ""}
+                    onChange={(event) => {
+                      const selected = knownClients.find((client) => client.id === event.target.value);
+                      setForm((prev) => ({
+                        ...prev,
+                        client_id: event.target.value || null,
+                        client_name: selected?.name ?? "",
+                        customer_contact_name: selected?.contactName || prev.customer_contact_name,
+                        customer_contact_phone: selected?.phone || prev.customer_contact_phone,
+                        client_email: selected?.email ?? "",
+                        client_billing_address: selected?.billingAddress ?? "",
+                        client_notes: selected?.notes ?? "",
+                        save_client_for_future: false,
+                      }));
+                    }}
+                    className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
+                  >
+                    <option value="">Select known client</option>
+                    {knownClients.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.name}
+                        {client.email ? ` (${client.email})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {!knownClients.length ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      No saved clients found. Use New to enter client details.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="text-xs uppercase tracking-widest text-muted-foreground">
+                    Client Name
+                  </label>
+                  <input
+                    value={form.client_name ?? ""}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, client_name: event.target.value }))
+                    }
+                    className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs uppercase tracking-widest text-muted-foreground">
+                    Client Email
+                  </label>
+                  <input
+                    type="email"
+                    value={form.client_email ?? ""}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, client_email: event.target.value }))
+                    }
+                    className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs uppercase tracking-widest text-muted-foreground">
+                    Contact Name
+                  </label>
+                  <input
+                    value={form.customer_contact_name ?? ""}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, customer_contact_name: event.target.value }))
+                    }
+                    className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs uppercase tracking-widest text-muted-foreground">
+                    Contact Phone
+                  </label>
+                  <input
+                    value={form.customer_contact_phone ?? ""}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, customer_contact_phone: event.target.value }))
+                    }
+                    className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-xs uppercase tracking-widest text-muted-foreground">
+                    Billing Address
+                  </label>
+                  <input
+                    value={form.client_billing_address ?? ""}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, client_billing_address: event.target.value }))
+                    }
+                    className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-xs uppercase tracking-widest text-muted-foreground">
+                    Client Notes
+                  </label>
+                  <textarea
+                    value={form.client_notes ?? ""}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, client_notes: event.target.value }))
+                    }
+                    className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
+                    rows={2}
+                  />
+                </div>
+                {clientMode === "new" ? (
+                  <label className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm text-muted-foreground md:col-span-2">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(form.save_client_for_future)}
+                      onChange={(event) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          save_client_for_future: event.target.checked,
+                        }))
+                      }
+                    />
+                    Save this client for future trips
+                  </label>
+                ) : null}
+              </div>
             </div>
             <div>
               <label className="text-xs uppercase tracking-widest text-muted-foreground">Waybill No.</label>
@@ -868,30 +1105,6 @@ export default function TripForm({
               <input
                 value={form.tonnage_load ?? ""}
                 onChange={(event) => setForm((prev) => ({ ...prev, tonnage_load: event.target.value }))}
-                className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="text-xs uppercase tracking-widest text-muted-foreground">
-                Customer Contact (Name)
-              </label>
-              <input
-                value={form.customer_contact_name ?? ""}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, customer_contact_name: event.target.value }))
-                }
-                className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="text-xs uppercase tracking-widest text-muted-foreground">
-                Customer Contact (Phone)
-              </label>
-              <input
-                value={form.customer_contact_phone ?? ""}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, customer_contact_phone: event.target.value }))
-                }
                 className="mt-2 w-full rounded-xl border border-border px-3 py-2 text-sm"
               />
             </div>

@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import GoogleMap from "@/components/maps/GoogleMap";
 import TripStatusBadge from "@/components/trips/TripStatusBadge";
+import TripWorkflowSteps from "@/components/trips/TripWorkflowSteps";
 import { fetchOmcBalances } from "@/lib/api/fuel_analytics";
 import { fetchTrip } from "@/lib/api/trips";
 import {
@@ -24,9 +25,15 @@ import { cn } from "@/lib/utils/cn";
 import { formatDate } from "@/lib/utils/format";
 import type { PreTripInspection, Trip } from "@/types/api";
 
-const tabs = ["overview", "inspection", "evidence", "expenses", "audit"] as const;
+const tabs = [
+  { key: "overview", label: "Overview" },
+  { key: "dispatch", label: "Dispatch" },
+  { key: "documents", label: "Documents" },
+  { key: "money", label: "Money" },
+  { key: "activity", label: "Activity" },
+] as const;
 
-type TabKey = (typeof tabs)[number];
+type TabKey = (typeof tabs)[number]["key"];
 type ChecklistStatus = "pass" | "fail" | "na";
 
 function normalizeChecklistStatus(value: unknown): ChecklistStatus | null {
@@ -720,20 +727,24 @@ export default function TripDetailPage() {
             Expense: {trip.road_expense_payment_status ?? "pending"}
           </DetailBadge>
         </div>
+
+        <div className="mt-4">
+          <TripWorkflowSteps status={trip.status} compact />
+        </div>
       </header>
 
       <div className="flex gap-2 border-b border-border pb-2">
         {tabs.map((t) => (
           <button
-            key={t}
+            key={t.key}
             type="button"
-            onClick={() => setTab(t)}
+            onClick={() => setTab(t.key)}
             className={cn(
               "rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide",
-              tab === t ? "bg-primary/20 text-primary" : "text-muted-foreground hover:bg-card"
+              tab === t.key ? "bg-primary/20 text-primary" : "text-muted-foreground hover:bg-card"
             )}
           >
-            {t}
+            {t.label}
           </button>
         ))}
       </div>
@@ -770,7 +781,7 @@ export default function TripDetailPage() {
             </>
           ) : null}
 
-          {tab === "inspection" ? (
+          {tab === "dispatch" ? (
             <PreTripCard
               tripId={Number(tripId)}
               trip={trip}
@@ -782,7 +793,7 @@ export default function TripDetailPage() {
             />
           ) : null}
 
-          {tab === "evidence" ? (
+          {tab === "documents" ? (
             <Section title="Evidence" subtitle="Photos and signatures attached to this trip">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {evidence.map((item) => (
@@ -801,7 +812,7 @@ export default function TripDetailPage() {
             </Section>
           ) : null}
 
-          {tab === "expenses" ? (
+          {tab === "money" ? (
             <Section title="Fuel & Road Expense" subtitle="Financial details for this trip">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-md border border-border bg-card p-3">
@@ -818,7 +829,7 @@ export default function TripDetailPage() {
             </Section>
           ) : null}
 
-          {tab === "audit" ? (
+          {tab === "activity" ? (
             <Section title="Audit Trail" subtitle="Recent events and action history">
               {trip.events?.length ? (
                 <div className="space-y-2">

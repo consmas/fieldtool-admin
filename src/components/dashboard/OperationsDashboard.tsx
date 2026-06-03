@@ -3,13 +3,25 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import type { ReactNode } from "react";
-import { AlertTriangle, ArrowUpRight, CheckCircle2, Clock3, Fuel, MapPin, Route, Truck, Wrench } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowUpRight,
+  CheckCircle2,
+  ClipboardCheck,
+  Clock3,
+  Fuel,
+  MapPin,
+  Plus,
+  ReceiptText,
+  Route,
+  Truck,
+  Wrench,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchTrips } from "@/lib/api/trips";
 import { fetchMaintenanceReport } from "@/lib/api/maintenance";
 import {
   fetchAuditLogs,
-  fetchAuditSummary,
   fetchComplianceDashboard,
   fetchIncidentDashboard,
 } from "@/lib/api/compliance_incidents";
@@ -124,11 +136,6 @@ export default function OperationsDashboard() {
   const { data: incidentsDashboard = {} } = useQuery({
     queryKey: ["incidents", "overview-dashboard"],
     queryFn: () => fetchIncidentDashboard(),
-    refetchInterval: 60_000,
-  });
-  const { data: auditSummary = {} } = useQuery({
-    queryKey: ["audit", "summary-dashboard"],
-    queryFn: () => fetchAuditSummary(),
     refetchInterval: 60_000,
   });
   const { data: criticalAuditLogs = { items: [] } } = useQuery({
@@ -263,6 +270,33 @@ export default function OperationsDashboard() {
 
   return (
     <div className="space-y-4 md:space-y-6">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <WorkflowAction
+          href="/trips/new"
+          title="Create Trip"
+          detail="Client, route, vehicle, driver"
+          icon={<Plus className="h-4 w-4" />}
+        />
+        <WorkflowAction
+          href="/dispatch"
+          title="Dispatch Trips"
+          detail={`${summary.pendingInspections} awaiting checks`}
+          icon={<ClipboardCheck className="h-4 w-4" />}
+        />
+        <WorkflowAction
+          href="/trips?filter=in_transit"
+          title="Monitor Trips"
+          detail={`${summary.active} active right now`}
+          icon={<Truck className="h-4 w-4" />}
+        />
+        <WorkflowAction
+          href="/finance"
+          title="Reconcile Money"
+          detail="Expenses, fuel, payments"
+          icon={<ReceiptText className="h-4 w-4" />}
+        />
+      </section>
+
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Active Trips" value={summary.active} helper={`${summary.completedToday} completed today`} icon={<Truck className="h-4 w-4" />} accent="active" />
         <KpiCard label="Critical Alerts" value={alerts.filter((a) => a.tone === "danger").length} helper={`${alerts.length} total feed items`} icon={<AlertTriangle className="h-4 w-4" />} accent="alerts" />
@@ -342,8 +376,8 @@ export default function OperationsDashboard() {
         <div className="ops-card overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
             <h3 className="text-sm font-semibold text-foreground">Alert Feed</h3>
-            <Link href="/logistics" className="text-xs text-primary hover:underline">
-              Open Logistics
+            <Link href="/dispatch" className="text-xs text-primary hover:underline">
+              Open Dispatch
             </Link>
           </div>
           <div className="max-h-[360px] space-y-2 overflow-y-auto p-3">
@@ -493,6 +527,31 @@ export default function OperationsDashboard() {
         </div>
       </section>
     </div>
+  );
+}
+
+function WorkflowAction({
+  href,
+  title,
+  detail,
+  icon,
+}: {
+  href: string;
+  title: string;
+  detail: string;
+  icon: ReactNode;
+}) {
+  return (
+    <Link href={href} className="ops-card flex items-center justify-between gap-3 p-4 transition hover:bg-accent/30">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="rounded-md border border-primary/35 bg-primary/10 p-2 text-primary">{icon}</div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-foreground">{title}</p>
+          <p className="truncate text-xs text-muted-foreground">{detail}</p>
+        </div>
+      </div>
+      <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+    </Link>
   );
 }
 

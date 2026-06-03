@@ -9,12 +9,11 @@ import {
   Bell,
   ChartColumnIncreasing,
   ClipboardCheck,
+  Cog,
   FileText,
   Fuel,
   LogOut,
-  Map,
   MapPin,
-  MessageSquare,
   ReceiptText,
   Truck,
   Users,
@@ -32,7 +31,8 @@ type NavItem = {
   href: string;
   label: string;
   icon: ComponentType<{ className?: string }>;
-  section: "Command" | "Operations" | "Finance";
+  section: "Run Today" | "Money" | "Fleet & Safety" | "Admin";
+  match?: string[];
 };
 
 type SidebarProps = {
@@ -41,33 +41,43 @@ type SidebarProps = {
 };
 
 const navItems: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: ChartColumnIncreasing, section: "Command" },
-  { href: "/driver-intelligence", label: "Driver Intelligence", icon: BadgeCheck, section: "Command" },
-  { href: "/incidents", label: "Incidents", icon: AlertTriangle, section: "Command" },
-  { href: "/logistics", label: "Logistics", icon: ClipboardCheck, section: "Command" },
-  { href: "/notifications", label: "Notifications", icon: Bell, section: "Command" },
-  { href: "/trips", label: "Trips", icon: Truck, section: "Operations" },
-  { href: "/tracking", label: "Tracking", icon: Map, section: "Operations" },
-  { href: "/trip-chats", label: "Trip Chats", icon: MessageSquare, section: "Operations" },
-  { href: "/maintenance", label: "Maintenance", icon: Wrench, section: "Operations" },
-  { href: "/destinations", label: "Destinations", icon: MapPin, section: "Operations" },
-  { href: "/vehicles", label: "Vehicles", icon: Waypoints, section: "Operations" },
-  { href: "/fuel-prices", label: "Fuel Management", icon: Fuel, section: "Finance" },
-  { href: "/expenses", label: "Expenses", icon: ReceiptText, section: "Finance" },
-  { href: "/compliance", label: "Compliance", icon: ClipboardCheck, section: "Finance" },
-  { href: "/reports", label: "Reports", icon: FileText, section: "Finance" },
-  { href: "/users", label: "Users", icon: Users, section: "Finance" },
+  { href: "/dashboard", label: "Command Center", icon: ChartColumnIncreasing, section: "Run Today" },
+  { href: "/trips", label: "Trips", icon: Truck, section: "Run Today", match: ["/tracking", "/trip-chats"] },
+  { href: "/dispatch", label: "Dispatch", icon: ClipboardCheck, section: "Run Today", match: ["/logistics"] },
+  { href: "/notifications", label: "Alerts", icon: Bell, section: "Run Today" },
+  { href: "/finance", label: "Finance", icon: ReceiptText, section: "Money", match: ["/expenses"] },
+  {
+    href: "/fuel-prices",
+    label: "Fuel",
+    icon: Fuel,
+    section: "Money",
+    match: ["/fuel-analytics", "/fuel-deposit-reconciliation"],
+  },
+  { href: "/reports", label: "Reports", icon: FileText, section: "Money" },
+  { href: "/fleet", label: "Fleet", icon: Waypoints, section: "Fleet & Safety", match: ["/vehicles"] },
+  { href: "/maintenance", label: "Maintenance", icon: Wrench, section: "Fleet & Safety" },
+  { href: "/destinations", label: "Destinations", icon: MapPin, section: "Fleet & Safety" },
+  { href: "/compliance", label: "Compliance", icon: BadgeCheck, section: "Fleet & Safety" },
+  { href: "/incidents", label: "Incidents", icon: AlertTriangle, section: "Fleet & Safety" },
+  { href: "/driver-intelligence", label: "Drivers", icon: BadgeCheck, section: "Fleet & Safety" },
+  { href: "/clients", label: "Clients", icon: Users, section: "Admin", match: ["/client-users"] },
+  { href: "/users", label: "Team", icon: Users, section: "Admin" },
+  { href: "/audit-trail", label: "Audit Trail", icon: FileText, section: "Admin" },
+  { href: "/notifications/preferences", label: "Settings", icon: Cog, section: "Admin", match: ["/notifications/escalation-rules"] },
 ];
 
 const dispatcherAllowed = new Set([
   "/reports",
   "/logistics",
+  "/dispatch",
   "/trip-chats",
   "/notifications",
   "/destinations",
   "/fuel-prices",
   "/expenses",
+  "/finance",
   "/trips",
+  "/tracking",
 ]);
 
 const financeAllowed = new Set([
@@ -75,6 +85,8 @@ const financeAllowed = new Set([
   "/reports",
   "/expenses",
   "/fuel-prices",
+  "/fuel-analytics",
+  "/fuel-deposit-reconciliation",
   "/incidents",
 ]);
 
@@ -113,7 +125,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
     return true;
   });
 
-  const sections: Array<NavItem["section"]> = ["Command", "Operations", "Finance"];
+  const sections: Array<NavItem["section"]> = ["Run Today", "Money", "Fleet & Safety", "Admin"];
 
   return (
     <aside
@@ -161,7 +173,10 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
             <div key={section} className="space-y-1.5">
               <p className="px-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{section}</p>
               {items.map((item) => {
-                const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const active =
+                  pathname === item.href ||
+                  pathname.startsWith(`${item.href}/`) ||
+                  Boolean(item.match?.some((href) => pathname === href || pathname.startsWith(`${href}/`)));
                 const Icon = item.icon;
 
                 return (
@@ -178,7 +193,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
                   >
                     <Icon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
                     <span className="truncate">{item.label}</span>
-                    {item.href === "/trip-chats" && unreadCount > 0 ? (
+                    {item.href === "/trips" && unreadCount > 0 ? (
                       <span className="ml-auto rounded-full bg-rose-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-rose-300">
                         {unreadCount}
                       </span>
