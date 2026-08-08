@@ -54,6 +54,7 @@ const navItems: NavItem[] = [
     match: ["/fuel-analytics", "/fuel-deposit-reconciliation"],
   },
   { href: "/reports", label: "Reports", icon: FileText, section: "Money" },
+  { href: "/operations", label: "Operations", icon: ClipboardCheck, section: "Run Today" },
   { href: "/fleet", label: "Fleet", icon: Waypoints, section: "Fleet & Safety", match: ["/vehicles"] },
   { href: "/maintenance", label: "Maintenance", icon: Wrench, section: "Fleet & Safety" },
   { href: "/destinations", label: "Destinations", icon: MapPin, section: "Fleet & Safety" },

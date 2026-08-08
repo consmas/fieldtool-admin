@@ -10,8 +10,11 @@ export function decodeTokenPayload(token: string): JwtPayload | null {
 }
 
 export function isTokenExpired(token: string, skewSeconds = 30): boolean {
+  if (!token) return true;
+
   const payload = decodeTokenPayload(token);
-  if (!payload?.exp) return true;
+  if (!payload?.exp) return false;
+
   const now = Math.floor(Date.now() / 1000);
   return payload.exp <= now + skewSeconds;
 }

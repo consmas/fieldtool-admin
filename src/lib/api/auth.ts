@@ -14,7 +14,15 @@ export async function login(payload: LoginPayload) {
   );
 
   const authHeader = res.headers["authorization"] as string | undefined;
-  const token = authHeader?.replace("Bearer ", "") ?? null;
+  const headerToken = authHeader?.replace("Bearer ", "") ?? null;
+  const data = res.data ?? {};
+  const bodyToken =
+    (data as LoginResponse).token ||
+    (data as LoginResponse).jwt ||
+    (data as LoginResponse).access_token ||
+    (data as LoginResponse).data?.token ||
+    null;
+  const token = headerToken ?? bodyToken;
 
   return { data: res.data, token };
 }
